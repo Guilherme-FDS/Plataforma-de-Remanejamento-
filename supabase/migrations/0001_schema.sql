@@ -251,7 +251,10 @@ as $$
   end;
 $$;
 
-create view vw_remanejamentos as
+-- security_invoker NÃO é opcional. Sem ele a view roda com os privilégios de
+-- quem a criou (o papel `postgres` do SQL Editor), que IGNORA RLS — e a view
+-- vira um furo que devolve todos os dados clínicos para a anon key.
+create view vw_remanejamentos with (security_invoker = true) as
 select
   r.*,
   c.matricula,
