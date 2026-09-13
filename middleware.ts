@@ -11,26 +11,30 @@ import { NextResponse, type NextRequest } from "next/server";
 export async function middleware(request: NextRequest) {
   let resposta = NextResponse.next({ request });
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll(paraGravar) {
-          for (const { name, value } of paraGravar) {
-            request.cookies.set(name, value);
-          }
-          resposta = NextResponse.next({ request });
-          for (const { name, value, options } of paraGravar) {
-            resposta.cookies.set(name, value, options);
-          }
-        },
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const chave = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  // Sem as variáveis, deixa passar em vez de derrubar toda requisição do
+  // site. Não abre brecha: sem credencial o app não consulta nada, e quem
+  // guarda os dados é a RLS, não este middleware.
+  if (!url || !chave) return resposta;
+
+  const supabase = createServerClient(url, chave, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll();
+      },
+      setAll(paraGravar) {
+        for (const { name, value } of paraGravar) {
+          request.cookies.set(name, value);
+        }
+        resposta = NextResponse.next({ request });
+        for (const { name, value, options } of paraGravar) {
+          resposta.cookies.set(name, value, options);
+        }
       },
     },
-  );
+  });
 
   // getUser() revalida o token no servidor. Não troque por getSession(),
   // que confia no cookie sem verificar.
@@ -42,17 +46,17 @@ export async function middleware(request: NextRequest) {
   const ehLogin = caminho.startsWith("/login");
 
   if (!user && !ehLogin) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/login";
-    url.searchParams.set("de", caminho);
-    return NextResponse.redirect(url);
+    const destino = request.nextUrl.clone();
+    destino.pathname = "/login";
+    destino.searchParams.set("de", caminho);
+    return NextResponse.redirect(destino);
   }
 
   if (user && ehLogin) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/";
-    url.search = "";
-    return NextResponse.redirect(url);
+    const destino = request.nextUrl.clone();
+    destino.pathname = "/";
+    destino.search = "";
+    return NextResponse.redirect(destino);
   }
 
   return resposta;

@@ -255,19 +255,32 @@ export const sugestoesContraindicacao = cache(
   },
 );
 
-/** Perfil do usuário logado, ou null se não houver sessão. */
+/**
+ * Perfil do usuário logado, ou null se não houver sessão.
+ *
+ * Nunca lança: é chamado pelo layout raiz, que envolve TODAS as páginas —
+ * inclusive o login. Um erro aqui derrubaria a tela de login e deixaria o
+ * usuário sem como entrar. Já aconteceu em produção, nos segundos em que a
+ * Vercel ainda propagava as variáveis de ambiente para os nós de edge.
+ */
 export async function perfilAtual() {
-  const supabase = clienteServidor();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
+  try {
+    const supabase = clienteServidor();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return null;
 
-  const { data } = await supabase
-    .from("perfis")
-    .select("nome, funcao, admin, ativo")
-    .eq("id", user.id)
-    .maybeSingle();
+    const { data } = await supabase
+      .from("perfis")
+      .select("nome, funcao, admin, ativo")
+      .eq("id", user.id)
+      .maybeSingle();
 
-  return data ? { ...data, email: user.email ?? "" } : null;
+    return data ? { ...data, email: user.email ?? "" } : null;
+  } catch {
+    // Sem perfil, a navegação aparece sem o nome do usuário. As páginas de
+    // dados continuam falhando alto, como devem.
+    return null;
+  }
 }
