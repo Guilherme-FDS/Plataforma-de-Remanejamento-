@@ -14,8 +14,9 @@ condições clínicas graves e permanentes. Isso é **dado pessoal sensível**
 
 Por isso:
 
-- `dados/*.json` e `supabase/migrations/0002_dados.sql` estão no `.gitignore`.
-  **Só remova essa regra se o repositório for privado.**
+- `dados/*.json` e `supabase/migrations/0002_dados.sql` estão no `.gitignore`
+  e **assim devem permanecer** — o repositório é público. Os dados vivem no
+  Supabase, protegidos por RLS.
 - O projeto Supabase deve ter o **auto-cadastro desligado**
   (Authentication → Providers → Email → *Enable signup* = off). Usuário só
   existe se alguém da equipe criar.
@@ -115,35 +116,57 @@ comentário no topo do arquivo e na tela `/pendencias`.
 
 ## Publicar na Vercel
 
-O protótipo não precisa de variável de ambiente: os dados são lidos em tempo
-de build. Só que **`dados/*.json` está no `.gitignore`** — sem eles o build
-falha na Vercel. Escolha um caminho:
+**O repositório é público (portfólio), e isso está correto** — desde que os
+dados morem no Supabase e o app leia em runtime. Aí o repo tem só código.
+A ordem importa:
 
-**A. Repositório privado (recomendado)**
+```
+1. Supabase  ->  2. trocar lib/dados.ts  ->  3. Vercel
+```
 
-1. GitHub → Settings → *Change repository visibility* → **Private**.
-2. Remova do `.gitignore` as duas últimas linhas (`dados/*.json` e
-   `supabase/migrations/0002_dados.sql`), então:
-   ```bash
-   git add -A && git commit -m "Adiciona base importada" && git push
-   ```
+Inverter a ordem não funciona: hoje o app lê `dados/*.json` em tempo de
+build, e esses arquivos estão no `.gitignore`. Sem eles a Vercel não
+consegue compilar. Enquanto o passo 2 não acontece, rode local com
+`npm run dev`.
+
+### Passos
+
+1. Suba o banco (seção acima) e carregue o `0002_dados.sql`.
+2. Troque `lib/dados.ts` para consultar o Supabase. Só esse arquivo muda.
 3. [vercel.com/new](https://vercel.com/new) → *Import Git Repository* →
    selecione o repositório → **Deploy**. A Vercel detecta Next.js sozinha;
    não mexa em build command nem output directory.
+4. Settings → Environment Variables:
 
-**B. Repositório público**
+   ```
+   NEXT_PUBLIC_SUPABASE_URL=https://<projeto>.supabase.co
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon key>
+   ```
 
-Os dados ficam só na sua máquina. Para publicar, conecte antes o Supabase
-(o app passa a ler do banco em runtime, e nada sensível entra no git).
-Enquanto isso, rode local com `npm run dev`.
+   Marque os três ambientes (Production, Preview, Development) e **redeploy** —
+   variável adicionada depois do build não entra sozinha.
 
-Em qualquer caso, quando o Supabase entrar, adicione na Vercel
-(Settings → Environment Variables):
+### O que protege os dados num repo público
 
-```
-NEXT_PUBLIC_SUPABASE_URL=https://<projeto>.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon key>
-```
+Não é o `.gitignore`, e não é a env var: a `anon key` é **pública por
+projeto** — ela vai para o navegador de qualquer visitante do app publicado.
+Quem protege é a **RLS**, e por isso o Bloco 7 do schema não é opcional:
+
+- toda tabela tem `enable row level security`;
+- toda policy exige `e_equipe()`, isto é, uma linha ativa em `perfis`;
+- o auto-cadastro fica desligado, então ninguém cria perfil sozinho.
+
+Com a `anon key` e sem login, um visitante recebe zero linha. Se qualquer
+uma dessas três coisas falhar, a chave pública vira acesso aberto ao banco.
+**Depois de rodar o Bloco 7, confira:** abra o app publicado numa janela
+anônima; as listas têm de vir vazias.
+
+### Para o portfólio
+
+O app em produção vai estar atrás de login e com dado real — ninguém que
+receber o link vai conseguir ver nada. Vale gerar uma base sintética (nomes
+fictícios, mesma estrutura e volume) para um deploy de demonstração
+separado, que pode ficar aberto.
 
 ---
 
