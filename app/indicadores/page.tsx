@@ -12,12 +12,12 @@ import {
 import { listarRemanejamentos } from "@/lib/dados";
 import type { Remanejamento } from "@/lib/tipos";
 
-export default function Indicadores({
+export default async function Indicadores({
   searchParams,
 }: {
   searchParams: { ano?: string };
 }) {
-  const todos = listarRemanejamentos().filter((r) => !r.duplicataDe);
+  const todos = await listarRemanejamentos();
   const anos = anosDisponiveis(todos);
   const ano = Number(searchParams.ano) || anos[0];
   const anterior = ano - 1;

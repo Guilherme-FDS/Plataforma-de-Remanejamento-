@@ -16,9 +16,9 @@ import {
 import { listarRemanejamentos } from "@/lib/dados";
 import type { Remanejamento } from "@/lib/tipos";
 
-export default function Painel() {
+export default async function Painel() {
   const ref = hoje();
-  const todos = listarRemanejamentos().filter((r) => !r.duplicataDe);
+  const todos = await listarRemanejamentos();
   const abertos = todos.filter((r) => estaAberto(r, ref));
 
   const aEncerrar = abertos.filter((r) => situacaoDe(r, ref) === "a_encerrar");
@@ -219,10 +219,10 @@ function ListaCasos({
     <ul className="divide-y divide-slate-100">
       {itens.map((r) => {
         const dias = diasAteFim(r, ref_);
-        const { data: fim } = previsaoFim(r);
+        const fim = previsaoFim(r);
         return (
           <li
-            key={r.linhaOrigem}
+            key={r.id}
             className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-5 py-3"
           >
             <div className="min-w-0 flex-1">

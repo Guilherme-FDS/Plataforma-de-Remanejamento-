@@ -14,17 +14,19 @@ import {
 } from "@/lib/calculos";
 import { historicoDoColaborador, obterColaborador } from "@/lib/dados";
 
-export default function FichaColaborador({
+export default async function FichaColaborador({
   params,
 }: {
   params: { matricula: string };
 }) {
   const matricula = Number(params.matricula);
-  const colaborador = obterColaborador(matricula);
+  const [colaborador, historico] = await Promise.all([
+    obterColaborador(matricula),
+    historicoDoColaborador(matricula),
+  ]);
   if (!colaborador) notFound();
 
   const ref = hoje();
-  const historico = historicoDoColaborador(matricula);
   const abertos = historico.filter((r) => estaAberto(r, ref));
   const regioes = [...new Set(historico.map((r) => r.regiao).filter(Boolean))];
   const diasTotais = historico
@@ -83,9 +85,9 @@ export default function FichaColaborador({
       <Cartao className="mt-6" titulo="Histórico">
         <ol className="divide-y divide-slate-100">
           {historico.map((r) => {
-            const { data: fim } = previsaoFim(r);
+            const fim = previsaoFim(r);
             return (
-              <li key={r.linhaOrigem} className="px-5 py-4">
+              <li key={r.id} className="px-5 py-4">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-sm font-medium tabular-nums text-slate-900">
                     {formatarData(r.dataInicio)}

@@ -6,8 +6,12 @@ import {
   sugestoesContraindicacao,
 } from "@/lib/dados";
 
-export default function NovoLancamento() {
-  const listas = obterListas();
+export default async function NovoLancamento() {
+  const [listas, colaboradores, sugestoes] = await Promise.all([
+    obterListas(),
+    listarColaboradores(),
+    sugestoesContraindicacao(),
+  ]);
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -16,9 +20,9 @@ export default function NovoLancamento() {
         descricao="Digite a matrícula: setor, turno e supervisor vêm preenchidos. A previsão de término é calculada — nunca digitada."
       />
       <FormularioLancamento
-        colaboradores={listarColaboradores()}
+        colaboradores={colaboradores}
         listas={listas}
-        sugestoes={sugestoesContraindicacao()}
+        sugestoes={sugestoes}
       />
     </div>
   );

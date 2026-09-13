@@ -32,14 +32,16 @@ const SITUACOES: { valor: string; rotulo: string }[] = [
   { valor: "encerrado", rotulo: "Encerrado" },
 ];
 
-export default function ListaRemanejamentos({
+export default async function ListaRemanejamentos({
   searchParams,
 }: {
   searchParams: Busca;
 }) {
   const ref = hoje();
-  const listas = obterListas();
-  const todos = listarRemanejamentos();
+  const [listas, todos] = await Promise.all([
+    obterListas(),
+    listarRemanejamentos(),
+  ]);
   const anos = anosDisponiveis(todos);
 
   const filtrados = todos.filter((r) => {
@@ -143,7 +145,7 @@ export default function ListaRemanejamentos({
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {ordenados.map((r) => (
-                  <Linha key={r.linhaOrigem} r={r} ref_={ref} />
+                  <Linha key={r.id} r={r} ref_={ref} />
                 ))}
               </tbody>
             </table>
@@ -155,30 +157,19 @@ export default function ListaRemanejamentos({
 }
 
 function Linha({ r, ref_ }: { r: Remanejamento; ref_: Date }) {
-  const { data: fim, origem } = previsaoFim(r);
+  const fim = previsaoFim(r);
   const dias = diasAteFim(r, ref_);
 
   return (
     <tr className="align-top hover:bg-slate-50">
       <td className="px-5 py-3">
-        {r.matricula ? (
-          <Link
-            href={`/colaboradores/${r.matricula}`}
-            className="font-medium text-slate-900 hover:underline"
-          >
-            {r.nome}
-          </Link>
-        ) : (
-          <span className="font-medium text-slate-900">{r.nome}</span>
-        )}
-        <p className="text-xs text-slate-400">
-          {r.matricula ?? "sem matrícula"}
-        </p>
-        {r.duplicataDe && (
-          <p className="mt-1 text-xs font-medium text-rose-600">
-            duplicata da linha {r.duplicataDe}
-          </p>
-        )}
+        <Link
+          href={`/colaboradores/${r.matricula}`}
+          className="font-medium text-slate-900 hover:underline"
+        >
+          {r.nome}
+        </Link>
+        <p className="text-xs text-slate-400">{r.matricula}</p>
       </td>
       <td className="px-3 py-3 text-slate-600">
         {r.setor ?? "—"}
@@ -199,9 +190,6 @@ function Linha({ r, ref_ }: { r: Remanejamento; ref_: Date }) {
       </td>
       <td className="whitespace-nowrap px-3 py-3 tabular-nums text-slate-600">
         {formatarDataObj(fim)}
-        {origem === "calculada" && fim && (
-          <p className="text-xs text-slate-400">calculada</p>
-        )}
         {dias !== null && dias >= 0 && dias <= 30 && (
           <p className="text-xs text-sky-600">em {dias}d</p>
         )}

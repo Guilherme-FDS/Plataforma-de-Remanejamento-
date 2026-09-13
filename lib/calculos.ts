@@ -28,41 +28,25 @@ export function diferencaEmDias(de: Date, ate: Date): number {
   return Math.round((ate.getTime() - de.getTime()) / 86_400_000);
 }
 
-export type OrigemPrevisao = "registrada" | "calculada" | null;
-
-/**
- * Previsão de término. A planilha registrava isso na coluna ENCERRAMENTO;
- * quando ficou vazia, dá para calcular a partir do início + duração.
- */
-export function previsaoFim(r: Remanejamento): {
-  data: Date | null;
-  origem: OrigemPrevisao;
-} {
-  const registrada = data(r.dataEncerramento);
-  if (registrada) return { data: registrada, origem: "registrada" };
-
-  const inicio = data(r.dataInicio);
-  if (inicio && r.duracaoTipo === "dias" && r.duracaoDias) {
-    return { data: somarDias(inicio, r.duracaoDias), origem: "calculada" };
-  }
-  return { data: null, origem: null };
+/** Previsão de término. Vem calculada do banco (coluna gerada). */
+export function previsaoFim(r: Remanejamento): Date | null {
+  return data(r.dataPrevistaFim);
 }
 
+/**
+ * ESPELHA a função `situacao_remanejamento()` do Postgres. As duas precisam
+ * dar o mesmo resultado — alterou aqui, altere lá (0001_schema.sql, Bloco 5).
+ */
 export function situacaoDe(r: Remanejamento, ref: Date = hoje()): Situacao {
-  if (r.duracaoTipo === "permanente" || r.encerramentoTexto === "PERMANENTE") {
-    return "permanente";
-  }
+  if (r.dataEncerramento) return "encerrado";
+  if (r.duracaoTipo === "permanente") return "permanente";
   if (r.duracaoTipo === "gestacao" || r.duracaoTipo === "licenca") {
     return "acompanhamento";
   }
 
-  const { data: fim, origem } = previsaoFim(r);
+  const fim = previsaoFim(r);
   if (!fim) return "sem_previsao";
-  if (fim >= ref) return "em_andamento";
-
-  // A previsão passou. Se a planilha tinha a data preenchida, o caso era
-  // tratado como resolvido; se estava vazia, ninguém fechou — é acionável.
-  return origem === "registrada" ? "encerrado" : "a_encerrar";
+  return fim >= ref ? "em_andamento" : "a_encerrar";
 }
 
 export const SITUACAO_ROTULO: Record<Situacao, string> = {
@@ -112,7 +96,7 @@ export function estaAberto(r: Remanejamento, ref: Date = hoje()): boolean {
 
 /** Dias até a previsão de término. Negativo = já venceu. */
 export function diasAteFim(r: Remanejamento, ref: Date = hoje()): number | null {
-  const { data: fim } = previsaoFim(r);
+  const fim = previsaoFim(r);
   return fim ? diferencaEmDias(ref, fim) : null;
 }
 
@@ -198,7 +182,6 @@ export interface Reincidencia {
 export function reincidencias(itens: Remanejamento[]): Reincidencia[] {
   const porPessoa = new Map<number, Remanejamento[]>();
   for (const r of itens) {
-    if (r.matricula === null || r.duplicataDe) continue;
     const lista = porPessoa.get(r.matricula) ?? [];
     lista.push(r);
     porPessoa.set(r.matricula, lista);

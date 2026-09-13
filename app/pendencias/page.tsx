@@ -30,8 +30,8 @@ const GRUPOS: {
   },
 ];
 
-export default function Pendencias() {
-  const todas = listarPendencias();
+export default async function Pendencias() {
+  const todas = await listarPendencias();
 
   return (
     <>
@@ -64,9 +64,9 @@ export default function Pendencias() {
               <Vazio>Nada aqui.</Vazio>
             ) : (
               <ul className="divide-y divide-slate-100">
-                {itens.map((p, i) => (
+                {itens.map((p) => (
                   <li
-                    key={`${p.linha}-${p.campo}-${i}`}
+                    key={p.id}
                     className="flex flex-wrap items-start gap-x-4 gap-y-1 px-5 py-3"
                   >
                     <span className="w-14 shrink-0 text-xs font-medium tabular-nums text-slate-400">

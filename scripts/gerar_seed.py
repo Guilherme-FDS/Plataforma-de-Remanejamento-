@@ -49,6 +49,70 @@ def busca(tabela, nome):
     return f"(select id from {tabela} where nome = {txt(nome)})"
 
 
+def gerar_pendencias():
+    """Gera 0003_pendencias.sql: tabela + carga do que a importação não
+    resolveu sozinha. Fica no banco, e não num JSON, porque é trabalho a
+    fazer — alguém precisa marcar como resolvido."""
+    pendencias = ler("pendencias.json")
+    destino = os.path.join(RAIZ, "supabase", "migrations",
+                           "0003_pendencias.sql")
+
+    linhas = [
+        "-- " + "=" * 74,
+        "-- Pendências da importação da planilha",
+        "-- GERADO por scripts/gerar_seed.py. Não edite à mão.",
+        "--",
+        "-- Rode DEPOIS de 0002_dados.sql.",
+        "-- " + "=" * 74,
+        "",
+        "create table if not exists importacao_pendencias (",
+        "  id              serial primary key,",
+        "  linha           integer not null,   -- linha na planilha original",
+        "  campo           text not null,",
+        "  motivo          text not null,",
+        "  valor_original  text,",
+        "  acao            text not null "
+        "check (acao in ('corrigido', 'revisar', 'descartado')),",
+        "  colaborador     text,",
+        "  resolvida       boolean not null default false,",
+        "  resolvida_por   uuid references perfis(id),",
+        "  resolvida_em    timestamptz",
+        ");",
+        "",
+        "comment on table importacao_pendencias is",
+        "  'O que a importação não teve base para decidir sozinha. Existe para "
+        "que nada fosse corrigido em silêncio: decisão sobre dado clínico é da "
+        "equipe, não do script.';",
+        "",
+        "alter table importacao_pendencias enable row level security;",
+        "",
+        "drop policy if exists equipe_total on importacao_pendencias;",
+        "create policy equipe_total on importacao_pendencias",
+        "  for all using (e_equipe()) with check (e_equipe());",
+        "",
+        "delete from importacao_pendencias;",
+        "",
+        "insert into importacao_pendencias "
+        "(linha, campo, motivo, valor_original, acao, colaborador) values",
+    ]
+
+    valores = [
+        "  (%d, %s, %s, %s, %s, %s)" % (
+            p["linha"], txt(p["campo"]), txt(p["motivo"]),
+            txt(p["valorOriginal"]), txt(p["acao"]), txt(p["colaborador"]),
+        )
+        for p in pendencias
+    ]
+    linhas.append(",\n".join(valores) + ";")
+    linhas.append("")
+    linhas.append("notify pgrst, 'reload schema';")
+
+    with open(destino, "w", encoding="utf-8") as f:
+        f.write("\n".join(linhas) + "\n")
+    print("Gerado: supabase/migrations/0003_pendencias.sql")
+    print(f"  pendencias:     {len(pendencias)}")
+
+
 def main():
     colaboradores = ler("colaboradores.json")
     eventos = ler("remanejamentos.json")
@@ -209,6 +273,8 @@ def main():
     os.makedirs(os.path.dirname(SAIDA), exist_ok=True)
     with open(SAIDA, "w", encoding="utf-8") as f:
         f.write("\n".join(linhas) + "\n")
+
+    gerar_pendencias()
 
     print("Gerado: supabase/migrations/0002_dados.sql")
     print(f"  colaboradores:  {len(colaboradores)}")

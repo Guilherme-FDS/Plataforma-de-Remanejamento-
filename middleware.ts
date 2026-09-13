@@ -1,0 +1,66 @@
+import { createServerClient } from "@supabase/ssr";
+import { NextResponse, type NextRequest } from "next/server";
+
+/**
+ * Renova a sessão a cada requisição e barra quem não está logado.
+ *
+ * A proteção de verdade é a RLS no Postgres — sem sessão, toda consulta
+ * devolve vazio. Este middleware existe para o usuário ver a tela de login
+ * em vez de um painel vazio sem explicação.
+ */
+export async function middleware(request: NextRequest) {
+  let resposta = NextResponse.next({ request });
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(paraGravar) {
+          for (const { name, value } of paraGravar) {
+            request.cookies.set(name, value);
+          }
+          resposta = NextResponse.next({ request });
+          for (const { name, value, options } of paraGravar) {
+            resposta.cookies.set(name, value, options);
+          }
+        },
+      },
+    },
+  );
+
+  // getUser() revalida o token no servidor. Não troque por getSession(),
+  // que confia no cookie sem verificar.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const caminho = request.nextUrl.pathname;
+  const ehLogin = caminho.startsWith("/login");
+
+  if (!user && !ehLogin) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/login";
+    url.searchParams.set("de", caminho);
+    return NextResponse.redirect(url);
+  }
+
+  if (user && ehLogin) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/";
+    url.search = "";
+    return NextResponse.redirect(url);
+  }
+
+  return resposta;
+}
+
+export const config = {
+  matcher: [
+    // Tudo, menos arquivos estáticos e imagens.
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+  ],
+};

@@ -16,17 +16,22 @@ export type Lateralidade = "direito" | "esquerdo" | "bilateral" | null;
 
 /**
  * Situação de um remanejamento. Nunca é digitada — sempre derivada de
- * data de início, duração e encerramento. Ver `situacaoDe()` em calculos.ts.
+ * duração, previsão e encerramento.
+ *
+ * A regra existe em dois lugares que precisam concordar: `situacaoDe()` em
+ * calculos.ts (usada pelas telas) e a função `situacao_remanejamento()` no
+ * Postgres (usada pela view e por consultas SQL). Mexeu numa, mexa na outra.
  */
 export type Situacao =
   | "em_andamento" // previsão de término ainda no futuro
-  | "a_encerrar" // previsão venceu e ninguém confirmou o encerramento
-  | "encerrado" // encerramento confirmado
+  | "a_encerrar" // previsão venceu e ninguém confirmou o desfecho
+  | "encerrado" // desfecho confirmado
   | "permanente" // restrição sem prazo
   | "acompanhamento" // gestação / licença — termina por evento, não por data
   | "sem_previsao"; // falta duração; não dá para acompanhar
 
 export interface Colaborador {
+  id: number;
   matricula: number;
   nome: string;
   setor: string | null;
@@ -34,42 +39,46 @@ export interface Colaborador {
 }
 
 export interface Remanejamento {
-  linhaOrigem: number;
-  matricula: number | null;
+  id: number;
+  colaboradorId: number;
+  matricula: number;
   nome: string;
-  dataInicio: string | null;
-  setor: string | null;
-  turno: string | null;
+
+  dataInicio: string;
   duracaoTipo: DuracaoTipo;
   duracaoDias: number | null;
+  /** Calculada pelo banco (coluna gerada): início + duração. Nunca digitada. */
+  dataPrevistaFim: string | null;
+  /** Desfecho de fato. Vazio enquanto o caso não for encerrado. */
+  dataEncerramento: string | null;
+
+  setor: string | null;
+  turno: string | null;
+  supervisor: string | null;
+
+  tipo: TipoRestricao;
   causa: string | null;
   segmento: string | null;
   regiao: string | null;
   lateralidade: Lateralidade;
   contraindicacao: string | null;
-  supervisor: string | null;
-  tipo: TipoRestricao;
   observacoes: string | null;
   profissional: string | null;
-  /**
-   * Na planilha, a coluna ENCERRAMENTO era preenchida no momento do
-   * lançamento (início + tempo), ou seja: é PREVISÃO de término, não a data
-   * em que o caso de fato foi resolvido. O sistema passa a separar as duas
-   * coisas — este campo guarda a previsão.
-   */
-  dataEncerramento: string | null;
-  /** "PERMANENTE", "FINAL DA GESTACAO"… quando o campo não era uma data. */
-  encerramentoTexto: string | null;
-  duplicataDe?: number;
+
+  /** 'planilha' para o que veio da importação, 'sistema' para o resto. */
+  origem: string;
+  linhaOrigem: number | null;
 }
 
 export interface Pendencia {
+  id: number;
   linha: number;
   campo: string;
   motivo: string;
   valorOriginal: string;
   acao: "corrigido" | "revisar" | "descartado";
   colaborador: string;
+  resolvida: boolean;
 }
 
 export interface Segmento {

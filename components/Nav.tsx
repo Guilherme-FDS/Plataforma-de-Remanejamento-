@@ -10,8 +10,11 @@ const ITENS = [
   { href: "/pendencias", rotulo: "Pendências" },
 ];
 
-export default function Nav() {
+export default function Nav({ usuario }: { usuario: string | null }) {
   const caminho = usePathname();
+
+  // A tela de login não tem navegação.
+  if (caminho.startsWith("/login")) return null;
 
   return (
     <header className="border-b border-slate-200 bg-white">
@@ -48,12 +51,30 @@ export default function Nav() {
           })}
         </nav>
 
-        <Link
-          href="/remanejamentos/novo"
-          className="rounded-md bg-slate-900 px-3.5 py-2 text-sm font-medium text-white transition hover:bg-slate-700"
-        >
-          Novo lançamento
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/remanejamentos/novo"
+            className="rounded-md bg-slate-900 px-3.5 py-2 text-sm font-medium text-white transition hover:bg-slate-700"
+          >
+            Novo lançamento
+          </Link>
+
+          {usuario && (
+            <>
+              <span className="hidden text-sm text-slate-500 sm:inline">
+                {usuario}
+              </span>
+              <form action="/auth/sair" method="post">
+                <button
+                  type="submit"
+                  className="rounded-md px-2 py-1.5 text-sm font-medium text-slate-400 transition hover:text-slate-900"
+                >
+                  Sair
+                </button>
+              </form>
+            </>
+          )}
+        </div>
       </div>
     </header>
   );

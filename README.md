@@ -66,8 +66,11 @@ lib/dados.ts            ÚNICO ponto de acesso a dados
 lib/calculos.ts         regras de negócio: situação, indicadores, clusters
 ```
 
-**`lib/dados.ts` é a costura.** Hoje lê os JSON; quando o Supabase existir,
-só esse arquivo muda — as telas não são tocadas.
+**`lib/dados.ts` é a costura** — o único ponto que fala com o banco. As
+telas recebem os tipos de `lib/tipos.ts` e não sabem de onde vieram.
+
+Os JSON em `dados/` são a saída da importação: alimentam `gerar_seed.py` e
+não são lidos pelo app.
 
 Três decisões que resolvem falhas estruturais da planilha:
 
@@ -98,7 +101,8 @@ Três decisões que resolvem falhas estruturais da planilha:
    **um bloco por vez**, na ordem — o editor do Supabase executa o script
    inteiro numa única transação, então um erro no fim desfaz tudo que veio
    antes, inclusive o que aparentemente funcionou.
-4. Rode `supabase/migrations/0002_dados.sql` (gerado por
+4. Rode `supabase/migrations/0002_dados.sql` e depois
+   `0003_pendencias.sql` (ambos gerados por
    `python scripts/gerar_seed.py`) da mesma forma.
 5. Crie o primeiro usuário em Authentication → Users → *Add user*, e depois
    o perfil correspondente:
@@ -116,23 +120,13 @@ comentário no topo do arquivo e na tela `/pendencias`.
 
 ## Publicar na Vercel
 
-**O repositório é público (portfólio), e isso está correto** — desde que os
-dados morem no Supabase e o app leia em runtime. Aí o repo tem só código.
-A ordem importa:
-
-```
-1. Supabase  ->  2. trocar lib/dados.ts  ->  3. Vercel
-```
-
-Inverter a ordem não funciona: hoje o app lê `dados/*.json` em tempo de
-build, e esses arquivos estão no `.gitignore`. Sem eles a Vercel não
-consegue compilar. Enquanto o passo 2 não acontece, rode local com
-`npm run dev`.
+**O repositório é público (portfólio), e isso está correto** — os dados moram
+no Supabase e o app lê em runtime, então o repo tem só código.
 
 ### Passos
 
-1. Suba o banco (seção acima) e carregue o `0002_dados.sql`.
-2. Troque `lib/dados.ts` para consultar o Supabase. Só esse arquivo muda.
+1. Suba o banco (seção acima): `0001`, `0002` e `0003`.
+2. Preencha `.env.local` a partir de `.env.local.example`.
 3. [vercel.com/new](https://vercel.com/new) → *Import Git Repository* →
    selecione o repositório → **Deploy**. A Vercel detecta Next.js sozinha;
    não mexa em build command nem output directory.
@@ -183,11 +177,12 @@ npm run build
 
 ## O que ainda não existe
 
-- Gravação de verdade — o formulário valida e mostra o registro pronto, mas
-  quem persiste é o Supabase.
-- Login e auditoria — o schema já tem `perfis`, `auditoria` e as policies de
-  RLS; falta ligar na aplicação.
+- **Gravação pelo formulário** — ele valida, normaliza e calcula a previsão,
+  mas ainda mostra o registro em vez de gravar.
 - **Incidência por 100 colaboradores** — depende do efetivo de cada setor
   (coluna `setores.efetivo`, hoje vazia). É o indicador mais acionável que
   falta: contagem absoluta esconde qual setor está pior.
-- Resolver pendência pela tela (hoje a lista é somente leitura).
+- **Encerrar caso pela tela** — a coluna `data_encerramento` existe e a
+  situação `a_encerrar` já aponta quem precisa disso.
+- **Resolver pendência pela tela** — `importacao_pendencias` já tem
+  `resolvida` / `resolvida_por` / `resolvida_em`; falta a ação na interface.
