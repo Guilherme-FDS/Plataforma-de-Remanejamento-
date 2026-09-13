@@ -8,9 +8,9 @@ objetivos: **lançar mais rápido** e **ter indicador que sustente decisão**.
 
 ## ⚠️ Antes de tudo: este projeto lida com dado de saúde identificado
 
-A base tem nome, matrícula e diagnóstico de 121 pessoas reais — incluindo
-tentativa de suicídio, epilepsia, amputação e gestação. Isso é **dado pessoal
-sensível** (LGPD art. 5º, II e art. 11).
+A base tem nome, matrícula e diagnóstico de 121 pessoas reais, incluindo
+condições clínicas graves e permanentes. Isso é **dado pessoal sensível**
+(LGPD art. 5º, II e art. 11).
 
 Por isso:
 

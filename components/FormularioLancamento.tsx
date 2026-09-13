@@ -189,7 +189,7 @@ export default function FormularioLancamento({
               onChange={(e) =>
                 aplicarMatricula(e.target.value.replace(/\D/g, ""))
               }
-              placeholder="58317"
+              placeholder="00000"
               className={campo}
               autoFocus
             />
