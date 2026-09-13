@@ -1,0 +1,24 @@
+node_modules/
+.next/
+out/
+build/
+.env
+.env.local
+.env*.local
+*.tsbuildinfo
+next-env.d.ts
+.DS_Store
+__pycache__/
+*.pyc
+
+# Planilhas de origem nunca entram no repo: contem dado de saude identificado
+*.xlsx
+*.xls
+
+# ---------------------------------------------------------------------------
+# DADO PESSOAL SENSÍVEL (LGPD art. 5º II e art. 11)
+# Nome, matrícula e diagnóstico de colaboradores identificados.
+# Estes arquivos SÓ podem entrar no git se o repositório for PRIVADO.
+# ---------------------------------------------------------------------------
+dados/*.json
+supabase/migrations/0002_dados.sql

@@ -1,0 +1,16 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  @apply bg-slate-50 text-slate-900 antialiased;
+}
+
+/* Tabelas largas rolam dentro do próprio container, nunca o body. */
+.rolagem-x {
+  @apply overflow-x-auto;
+}
