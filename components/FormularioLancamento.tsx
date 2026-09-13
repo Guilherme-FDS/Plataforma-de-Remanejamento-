@@ -16,7 +16,7 @@ const PRAZOS_RAPIDOS = [7, 15, 30, 60, 90, 120, 180];
 const rotuloCampo =
   "mb-1.5 block text-xs font-medium uppercase tracking-wide text-slate-500";
 const campo =
-  "h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500";
+  "h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-gtf-600 focus:outline-none focus:ring-1 focus:ring-gtf-600";
 
 export default function FormularioLancamento({
   colaboradores,
@@ -161,7 +161,7 @@ export default function FormularioLancamento({
         <button
           type="button"
           onClick={limpar}
-          className="mt-4 rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700"
+          className="mt-4 rounded-md bg-gtf-700 px-4 py-2 text-sm font-medium text-white hover:bg-gtf-800"
         >
           Lançar outro
         </button>
@@ -286,7 +286,7 @@ export default function FormularioLancamento({
                   onClick={() => setLateralidade(o.v)}
                   className={`h-10 flex-1 rounded-md border text-sm transition ${
                     lateralidade === o.v
-                      ? "border-slate-900 bg-slate-900 text-white"
+                      ? "border-gtf-700 bg-gtf-700 text-white"
                       : "border-slate-300 bg-white text-slate-600 hover:border-slate-400"
                   }`}
                 >
@@ -320,7 +320,7 @@ export default function FormularioLancamento({
             onChange={(e) => setContraindicacao(e.target.value)}
             rows={3}
             placeholder="O que o colaborador não pode fazer"
-            className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+            className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-gtf-600 focus:outline-none focus:ring-1 focus:ring-gtf-600"
           />
           {sugestoesDoSegmento.length > 0 && (
             <div className="mt-2">
@@ -356,7 +356,7 @@ export default function FormularioLancamento({
                   onClick={() => setTipo(t.id)}
                   className={`h-10 rounded-md border px-3.5 text-sm transition ${
                     tipo === t.id
-                      ? "border-slate-900 bg-slate-900 text-white"
+                      ? "border-gtf-700 bg-gtf-700 text-white"
                       : "border-slate-300 bg-white text-slate-600 hover:border-slate-400"
                   }`}
                 >
@@ -418,7 +418,7 @@ export default function FormularioLancamento({
                   onClick={() => setDuracaoDias(d)}
                   className={`h-10 w-14 rounded-md border text-sm tabular-nums transition ${
                     duracaoDias === d
-                      ? "border-slate-900 bg-slate-900 text-white"
+                      ? "border-gtf-700 bg-gtf-700 text-white"
                       : "border-slate-300 bg-white text-slate-600 hover:border-slate-400"
                   }`}
                 >
@@ -485,7 +485,7 @@ export default function FormularioLancamento({
         <button
           type="submit"
           disabled={faltando.length > 0}
-          className="rounded-md bg-slate-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+          className="rounded-md bg-gtf-700 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-300"
         >
           Salvar lançamento
         </button>

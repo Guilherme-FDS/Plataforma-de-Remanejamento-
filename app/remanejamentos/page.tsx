@@ -82,7 +82,7 @@ export default async function ListaRemanejamentos({
         acao={
           <Link
             href="/remanejamentos/novo"
-            className="rounded-md bg-slate-900 px-3.5 py-2 text-sm font-medium text-white hover:bg-slate-700"
+            className="rounded-md bg-gtf-700 px-3.5 py-2 text-sm font-medium text-white hover:bg-gtf-800"
           >
             Novo lançamento
           </Link>

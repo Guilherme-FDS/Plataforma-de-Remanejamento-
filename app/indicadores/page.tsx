@@ -56,7 +56,7 @@ export default async function Indicadores({
                 href={`/indicadores?ano=${a}`}
                 className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${
                   a === ano
-                    ? "bg-slate-900 text-white"
+                    ? "bg-gtf-700 text-white"
                     : "bg-white text-slate-600 ring-1 ring-slate-200 hover:text-slate-900"
                 }`}
               >

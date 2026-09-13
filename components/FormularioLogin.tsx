@@ -37,7 +37,7 @@ export default function FormularioLogin({ destino }: { destino: string }) {
   }
 
   const campo =
-    "h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500";
+    "h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-gtf-600 focus:outline-none focus:ring-1 focus:ring-gtf-600";
 
   return (
     <form onSubmit={entrar} className="space-y-4">
@@ -87,7 +87,7 @@ export default function FormularioLogin({ destino }: { destino: string }) {
       <button
         type="submit"
         disabled={enviando}
-        className="h-11 w-full rounded-md bg-slate-900 text-sm font-medium text-white transition hover:bg-slate-700 disabled:bg-slate-300"
+        className="h-11 w-full rounded-lg bg-gtf-700 text-sm font-medium text-white transition hover:bg-gtf-800 active:bg-gtf-900 disabled:bg-slate-300"
       >
         {enviando ? "Entrando…" : "Entrar"}
       </button>

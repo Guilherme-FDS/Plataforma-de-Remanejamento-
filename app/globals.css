@@ -6,11 +6,55 @@
   color-scheme: light;
 }
 
+html {
+  /* Evita o "pulo" de layout quando a barra de rolagem aparece. */
+  scrollbar-gutter: stable;
+  -webkit-tap-highlight-color: transparent;
+}
+
 body {
   @apply bg-slate-50 text-slate-900 antialiased;
+  /* Impede o arrastar-para-recarregar do Chrome Android dentro do PWA. */
+  overscroll-behavior-y: contain;
 }
 
 /* Tabelas largas rolam dentro do próprio container, nunca o body. */
 .rolagem-x {
-  @apply overflow-x-auto;
+  @apply -mx-px overflow-x-auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Alvo de toque mínimo de 44px em telas de dedo (WCAG 2.5.5). */
+@media (pointer: coarse) {
+  a,
+  button,
+  select,
+  [role="button"] {
+    min-height: 44px;
+  }
+
+  /* Exceções: elementos dentro de texto corrido e chips pequenos. */
+  p a,
+  .alvo-livre,
+  .alvo-livre a,
+  .alvo-livre button {
+    min-height: 0;
+  }
+}
+
+/* iOS dá zoom no campo se a fonte for menor que 16px. */
+@media (max-width: 640px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+@media print {
+  header,
+  nav,
+  .sem-impressao {
+    display: none !important;
+  }
 }

@@ -162,7 +162,7 @@ export function Barras({
             </div>
             <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-100">
               <div
-                className="h-full rounded-full bg-slate-700"
+                className="h-full rounded-full bg-gtf-700"
                 style={{ width: `${(item.total / maximo) * 100}%` }}
               />
             </div>

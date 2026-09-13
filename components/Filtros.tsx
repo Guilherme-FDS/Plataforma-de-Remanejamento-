@@ -50,7 +50,7 @@ export default function Filtros({
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
           placeholder="Nome ou matrícula…"
-          className="h-9 w-56 rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+          className="h-9 w-56 rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-gtf-600 focus:outline-none focus:ring-1 focus:ring-gtf-600"
         />
       )}
 
@@ -59,9 +59,9 @@ export default function Filtros({
           key={campo.nome}
           value={params.get(campo.nome) ?? ""}
           onChange={(e) => aplicar(campo.nome, e.target.value)}
-          className={`h-9 rounded-md border bg-white px-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-slate-500 ${
+          className={`h-9 rounded-md border bg-white px-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-gtf-600 ${
             params.get(campo.nome)
-              ? "border-slate-900 font-medium text-slate-900"
+              ? "border-gtf-600 font-medium text-gtf-700"
               : "border-slate-300 text-slate-600"
           }`}
         >
