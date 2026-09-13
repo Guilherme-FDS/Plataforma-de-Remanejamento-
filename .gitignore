@@ -20,5 +20,9 @@ __pycache__/
 # Nome, matrícula e diagnóstico de colaboradores identificados.
 # Estes arquivos SÓ podem entrar no git se o repositório for PRIVADO.
 # ---------------------------------------------------------------------------
-dados/*.json
-supabase/migrations/0002_dados.sql
+# A pasta inteira, nao so os .json: qualquer copia de dado real que caia
+# aqui (um .sql baixado, um .csv exportado) fica de fora por padrao.
+dados/
+
+# E o seed, em qualquer lugar do repo.
+*_dados.sql
