@@ -11,8 +11,11 @@ import { credenciais } from "./supabase-credenciais";
  * `next/headers`, que não pode entrar no bundle do cliente.
  */
 export function clienteServidor() {
-  const { url, chave } = credenciais();
+  // cookies() ANTES de credenciais(): é a chamada que sinaliza ao Next que a
+  // rota é dinâmica. Se credenciais() lançar primeiro, o erro acontece dentro
+  // da tentativa de pré-renderização e derruba o build inteiro.
   const cookieStore = cookies();
+  const { url, chave } = credenciais();
 
   return createServerClient(url, chave, {
     cookies: {

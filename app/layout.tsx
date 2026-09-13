@@ -9,6 +9,14 @@ export const metadata: Metadata = {
     "Controle de restrições funcionais e remanejamentos — Medicina Ocupacional e Ergonomia",
 };
 
+/**
+ * Nada neste app pode ser gerado em tempo de build: toda página depende da
+ * sessão do usuário e de dados que a RLS filtra por quem está logado. Uma
+ * página pré-renderizada seria, na melhor hipótese, vazia — e na pior,
+ * conteúdo de um usuário servido a outro.
+ */
+export const dynamic = "force-dynamic";
+
 export default async function RootLayout({
   children,
 }: {
