@@ -16,15 +16,14 @@ async function verificarOperador() {
     .eq("id", user.id)
     .maybeSingle();
 
-  if ((perfil as { papel?: string } | null)?.papel === "visualizador") {
+  const p = perfil as { papel?: string; unidade_id?: number } | null;
+
+  // Fail-safe: só operador altera. Ver nota em actions/remanejamentos.ts.
+  if (p?.papel !== "operador") {
     return { user: null, unidadeId: 1, erro: "Sem permissão." };
   }
 
-  return {
-    user,
-    unidadeId: (perfil as { unidade_id?: number } | null)?.unidade_id ?? 1,
-    erro: null,
-  };
+  return { user, unidadeId: p.unidade_id ?? 1, erro: null };
 }
 
 type Resultado = { ok: boolean; erro?: string };

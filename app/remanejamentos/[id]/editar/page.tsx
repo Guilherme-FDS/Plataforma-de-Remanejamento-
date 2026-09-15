@@ -1,7 +1,7 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Cabecalho } from "@/components/ui";
 import FormularioEdicao from "@/components/FormularioEdicao";
-import { obterRemanejamento, obterListas } from "@/lib/dados";
+import { obterRemanejamento, obterListas, perfilAtual } from "@/lib/dados";
 
 export default async function PaginaEditar({
   params,
@@ -11,10 +11,14 @@ export default async function PaginaEditar({
   const id = Number(params.id);
   if (isNaN(id)) notFound();
 
-  const [remanj, listas] = await Promise.all([
+  const [remanj, listas, perfil] = await Promise.all([
     obterRemanejamento(id),
     obterListas(),
+    perfilAtual(),
   ]);
+
+  // Visualizador não edita — bloqueia acesso direto pela URL.
+  if (perfil?.papel !== "operador") redirect("/remanejamentos");
 
   if (!remanj) notFound();
 

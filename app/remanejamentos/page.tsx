@@ -18,7 +18,7 @@ import {
   normalizar,
   situacaoDe,
 } from "@/lib/calculos";
-import { listarRemanejamentos, obterListas } from "@/lib/dados";
+import { listarRemanejamentos, obterListas, perfilAtual } from "@/lib/dados";
 import type { Remanejamento, Situacao } from "@/lib/tipos";
 
 type Busca = Record<string, string | undefined>;
@@ -39,10 +39,12 @@ export default async function ListaRemanejamentos({
   searchParams: Busca;
 }) {
   const ref = hoje();
-  const [listas, todos] = await Promise.all([
+  const [listas, todos, perfil] = await Promise.all([
     obterListas(),
     listarRemanejamentos(),
+    perfilAtual(),
   ]);
+  const podeEditar = perfil?.papel === "operador";
   const anos = anosDisponiveis(todos);
 
   const filtrados = todos.filter((r) => {
@@ -139,7 +141,7 @@ export default async function ListaRemanejamentos({
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {ordenados.map((r) => (
-                  <Linha key={r.id} r={r} ref_={ref} />
+                  <Linha key={r.id} r={r} ref_={ref} podeEditar={podeEditar} />
                 ))}
               </tbody>
             </table>
@@ -150,7 +152,15 @@ export default async function ListaRemanejamentos({
   );
 }
 
-function Linha({ r, ref_ }: { r: Remanejamento; ref_: Date }) {
+function Linha({
+  r,
+  ref_,
+  podeEditar,
+}: {
+  r: Remanejamento;
+  ref_: Date;
+  podeEditar: boolean;
+}) {
   const fim = previsaoFim(r);
   const dias = diasAteFim(r, ref_);
 
@@ -192,11 +202,12 @@ function Linha({ r, ref_ }: { r: Remanejamento; ref_: Date }) {
         <Selo situacao={situacaoDe(r, ref_)} />
       </td>
       <td className="px-3 py-3">
-        {(situacaoDe(r, ref_) === "a_encerrar" ||
-          situacaoDe(r, ref_) === "em_andamento" ||
-          situacaoDe(r, ref_) === "permanente" ||
-          situacaoDe(r, ref_) === "acompanhamento" ||
-          situacaoDe(r, ref_) === "sem_previsao") && (
+        {podeEditar &&
+          (situacaoDe(r, ref_) === "a_encerrar" ||
+            situacaoDe(r, ref_) === "em_andamento" ||
+            situacaoDe(r, ref_) === "permanente" ||
+            situacaoDe(r, ref_) === "acompanhamento" ||
+            situacaoDe(r, ref_) === "sem_previsao") && (
           <div className="flex flex-col gap-1">
             <Link
               href={`/remanejamentos/${r.id}/editar`}

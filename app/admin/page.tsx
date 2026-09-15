@@ -1,9 +1,15 @@
+import { redirect } from "next/navigation";
 import { Cabecalho } from "@/components/ui";
-import { obterListasAdmin } from "@/lib/dados";
+import { obterListasAdmin, perfilAtual } from "@/lib/dados";
 import { listarUsuarios } from "@/app/actions/usuarios";
 import AdminCliente from "./AdminCliente";
 
 export default async function PaginaAdmin() {
+  const perfil = await perfilAtual();
+
+  // Visualizador não acessa configurações.
+  if (perfil?.papel !== "operador") redirect("/");
+
   const [listas, usuarios] = await Promise.all([
     obterListasAdmin(),
     listarUsuarios(),

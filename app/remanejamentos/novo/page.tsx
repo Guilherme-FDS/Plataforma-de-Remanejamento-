@@ -1,17 +1,23 @@
+import { redirect } from "next/navigation";
 import FormularioLancamento from "@/components/FormularioLancamento";
 import { Cabecalho } from "@/components/ui";
 import {
   listarColaboradores,
   obterListas,
+  perfilAtual,
   sugestoesContraindicacao,
 } from "@/lib/dados";
 
 export default async function NovoLancamento() {
-  const [listas, colaboradores, sugestoes] = await Promise.all([
+  const [listas, colaboradores, sugestoes, perfil] = await Promise.all([
     obterListas(),
     listarColaboradores(),
     sugestoesContraindicacao(),
+    perfilAtual(),
   ]);
+
+  // Visualizador não lança — bloqueia acesso direto pela URL.
+  if (perfil?.papel !== "operador") redirect("/remanejamentos");
 
   return (
     <div className="mx-auto max-w-3xl">

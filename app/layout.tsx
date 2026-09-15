@@ -53,7 +53,10 @@ export default async function RootLayout({
     <html lang="pt-BR">
       <body className="min-h-[100dvh] bg-slate-50 antialiased">
         <ServiceWorker />
-        <Nav usuario={perfil?.nome ?? null} />
+        <Nav
+          usuario={perfil?.nome ?? null}
+          soLeitura={perfil?.papel !== "operador"}
+        />
         <main className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
           {children}
         </main>

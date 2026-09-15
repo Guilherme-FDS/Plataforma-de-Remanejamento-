@@ -16,11 +16,21 @@ async function verificarOperador() {
     .eq("id", user.id)
     .maybeSingle();
 
-  if (perfil?.papel === "visualizador") {
-    return { user: null, unidadeId: 1, erro: "Você tem perfil de visualizador — sem permissão para alterar dados." };
+  const p = perfil as { papel?: string; unidade_id?: number } | null;
+
+  // Fail-safe: só quem é explicitamente operador altera dados. Qualquer outro
+  // caso (visualizador, papel nulo, leitura bloqueada) fica sem permissão. O
+  // contrário — bloquear só o "visualizador" literal — liberaria por engano se
+  // a leitura do perfil falhasse.
+  if (p?.papel !== "operador") {
+    return {
+      user: null,
+      unidadeId: 1,
+      erro: "Você tem perfil de visualizador — sem permissão para alterar dados.",
+    };
   }
 
-  return { user, unidadeId: (perfil as { unidade_id?: number } | null)?.unidade_id ?? 1, erro: null };
+  return { user, unidadeId: p.unidade_id ?? 1, erro: null };
 }
 
 export async function editarRemanejamento(

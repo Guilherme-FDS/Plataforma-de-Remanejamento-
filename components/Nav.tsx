@@ -29,11 +29,20 @@ function iniciais(nome: string) {
   return (primeira + ultima).toUpperCase();
 }
 
-export default function Nav({ usuario }: { usuario: string | null }) {
+export default function Nav({
+  usuario,
+  soLeitura = false,
+}: {
+  usuario: string | null;
+  soLeitura?: boolean;
+}) {
   const caminho = usePathname();
 
   // A tela de login não tem navegação.
   if (caminho.startsWith("/login")) return null;
+
+  // Visualizador não gerencia dados: sem Config nem lançamento.
+  const itens = soLeitura ? ITENS.filter((i) => i.href !== "/admin") : ITENS;
 
   return (
     <>
@@ -50,7 +59,7 @@ export default function Nav({ usuario }: { usuario: string | null }) {
 
           {/* Navegação no topo só a partir de sm; no celular vai embaixo. */}
           <nav className="hidden flex-1 items-center gap-1 sm:flex">
-            {ITENS.map((item) => (
+            {itens.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
@@ -66,13 +75,15 @@ export default function Nav({ usuario }: { usuario: string | null }) {
           </nav>
 
           <div className="ml-auto flex items-center gap-2 sm:ml-0 sm:gap-3">
-            <Link
-              href="/remanejamentos/novo"
-              className="rounded-lg bg-gtf-700 px-3 py-2 text-sm font-medium text-white transition hover:bg-gtf-800 active:bg-gtf-900"
-            >
-              <span className="sm:hidden">Lançar</span>
-              <span className="hidden sm:inline">Novo lançamento</span>
-            </Link>
+            {!soLeitura && (
+              <Link
+                href="/remanejamentos/novo"
+                className="rounded-lg bg-gtf-700 px-3 py-2 text-sm font-medium text-white transition hover:bg-gtf-800 active:bg-gtf-900"
+              >
+                <span className="sm:hidden">Lançar</span>
+                <span className="hidden sm:inline">Novo lançamento</span>
+              </Link>
+            )}
 
             {usuario && (
               <div className="flex items-center gap-2 border-l border-slate-200 pl-2 sm:gap-3 sm:pl-3">
@@ -108,7 +119,7 @@ export default function Nav({ usuario }: { usuario: string | null }) {
       {/* ------------------------------------------ barra inferior (celular) */}
       <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)] sm:hidden">
         <div className="flex">
-          {ITENS.map((item) => {
+          {itens.map((item) => {
             const ativo = estaAtivo(caminho, item.href);
             const Icone = item.icone;
             return (
