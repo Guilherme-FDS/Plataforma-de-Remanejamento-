@@ -21,21 +21,9 @@ create table unidades (
 insert into unidades (nome) values ('Maringá');
 
 -- ╔══════════════════════════════════════════════════════════════════════════╗
--- ║ 2 — Função auxiliar: retorna a unidade do usuário logado                 ║
--- ╚══════════════════════════════════════════════════════════════════════════╝
-
-create or replace function minha_unidade_id()
-returns integer
-language sql
-stable
-security definer
-set search_path = public
-as $$
-  select unidade_id from perfis where id = auth.uid();
-$$;
-
--- ╔══════════════════════════════════════════════════════════════════════════╗
--- ║ 3 — Adiciona unidade_id a todas as tabelas relevantes                    ║
+-- ║ 2 — Adiciona unidade_id a todas as tabelas relevantes                    ║
+-- ║   Precisa vir ANTES da função minha_unidade_id(): funções `language sql` ║
+-- ║   validam o corpo na criação, e o corpo lê perfis.unidade_id.            ║
 -- ╚══════════════════════════════════════════════════════════════════════════╝
 
 alter table perfis              add column if not exists unidade_id integer references unidades(id);
@@ -47,6 +35,20 @@ alter table regioes_corporais   add column if not exists unidade_id integer refe
 alter table segmentos           add column if not exists unidade_id integer references unidades(id);
 alter table colaboradores       add column if not exists unidade_id integer references unidades(id);
 alter table remanejamentos      add column if not exists unidade_id integer references unidades(id);
+
+-- ╔══════════════════════════════════════════════════════════════════════════╗
+-- ║ 3 — Função auxiliar: retorna a unidade do usuário logado                 ║
+-- ╚══════════════════════════════════════════════════════════════════════════╝
+
+create or replace function minha_unidade_id()
+returns integer
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select unidade_id from perfis where id = auth.uid();
+$$;
 
 -- ╔══════════════════════════════════════════════════════════════════════════╗
 -- ║ 4 — Migra dados existentes: tudo é Maringá (id = 1)                     ║
