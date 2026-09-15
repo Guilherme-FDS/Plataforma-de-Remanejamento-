@@ -4,12 +4,19 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { clienteNavegador } from "@/lib/supabase-navegador";
 
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+
 export default function FormularioLogin({ destino }: { destino: string }) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
+  const [mostraEsqueci, setMostraEsqueci] = useState(false);
+  const [emailReset, setEmailReset] = useState("");
+  const [enviandoReset, setEnviandoReset] = useState(false);
+  const [feedbackReset, setFeedbackReset] = useState<{ ok: boolean; msg: string } | null>(null);
 
   async function entrar(e: React.FormEvent) {
     e.preventDefault();
@@ -36,8 +43,69 @@ export default function FormularioLogin({ destino }: { destino: string }) {
     router.refresh();
   }
 
+  async function solicitarReset(e: React.FormEvent) {
+    e.preventDefault();
+    setEnviandoReset(true);
+    setFeedbackReset(null);
+    const supabase = clienteNavegador();
+    const { error } = await supabase.auth.resetPasswordForEmail(emailReset.trim(), {
+      redirectTo: `${SITE_URL}/auth/callback?next=/auth/redefinir`,
+    });
+    setEnviandoReset(false);
+    setFeedbackReset(
+      error
+        ? { ok: false, msg: error.message }
+        : { ok: true, msg: "Link enviado! Verifique seu e-mail." },
+    );
+  }
+
   const campo =
     "h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-gtf-600 focus:outline-none focus:ring-1 focus:ring-gtf-600";
+
+  if (mostraEsqueci) {
+    return (
+      <div className="space-y-4">
+        <p className="text-sm text-slate-600">
+          Informe seu e-mail e enviaremos um link para você definir uma nova senha.
+        </p>
+        <form onSubmit={solicitarReset} className="space-y-3">
+          <input
+            type="email"
+            required
+            autoFocus
+            placeholder="seu@email.com"
+            value={emailReset}
+            onChange={(e) => setEmailReset(e.target.value)}
+            className={campo}
+          />
+          {feedbackReset && (
+            <p
+              className={`rounded-md px-3 py-2 text-sm ring-1 ring-inset ${
+                feedbackReset.ok
+                  ? "bg-emerald-50 text-emerald-800 ring-emerald-600/20"
+                  : "bg-rose-50 text-rose-700 ring-rose-600/20"
+              }`}
+            >
+              {feedbackReset.msg}
+            </p>
+          )}
+          <button
+            type="submit"
+            disabled={enviandoReset || !!feedbackReset?.ok}
+            className="h-11 w-full rounded-lg bg-gtf-700 text-sm font-medium text-white transition hover:bg-gtf-800 disabled:bg-slate-300"
+          >
+            {enviandoReset ? "Enviando…" : "Enviar link"}
+          </button>
+        </form>
+        <button
+          onClick={() => { setMostraEsqueci(false); setFeedbackReset(null); }}
+          className="block w-full text-center text-xs text-slate-400 hover:text-slate-700"
+        >
+          ← Voltar ao login
+        </button>
+      </div>
+    );
+  }
 
   return (
     <form onSubmit={entrar} className="space-y-4">
@@ -92,7 +160,15 @@ export default function FormularioLogin({ destino }: { destino: string }) {
         {enviando ? "Entrando…" : "Entrar"}
       </button>
 
-      <p className="pt-2 text-center text-xs leading-relaxed text-slate-500">
+      <button
+        type="button"
+        onClick={() => setMostraEsqueci(true)}
+        className="block w-full text-center text-xs text-slate-400 hover:text-gtf-700"
+      >
+        Esqueci a senha
+      </button>
+
+      <p className="pt-1 text-center text-xs leading-relaxed text-slate-500">
         Acesso restrito à equipe de medicina ocupacional e ergonomia. Não há
         auto-cadastro: o acesso é criado por um administrador.
       </p>

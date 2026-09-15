@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import type { ItemLista, ListasAdmin, SegmentoAdmin } from "@/lib/dados";
+import type { UsuarioAdmin } from "@/app/actions/usuarios";
 import {
   criarSetor, editarSetor, toggleSetor,
   criarTurno, editarTurno,
@@ -10,10 +11,12 @@ import {
   criarRegiao, editarRegiao,
   criarSegmento, editarSegmento, toggleSegmento,
 } from "@/app/actions/admin";
+import UsuariosCliente from "./UsuariosCliente";
 
-type Aba = "setores" | "turnos" | "supervisores" | "profissionais" | "segmentos" | "regioes";
+type Aba = "setores" | "turnos" | "supervisores" | "profissionais" | "segmentos" | "regioes" | "usuarios";
 
 const ABAS: { id: Aba; rotulo: string }[] = [
+  { id: "usuarios", rotulo: "Usuários" },
   { id: "setores", rotulo: "Setores" },
   { id: "turnos", rotulo: "Turnos" },
   { id: "supervisores", rotulo: "Supervisores" },
@@ -22,8 +25,14 @@ const ABAS: { id: Aba; rotulo: string }[] = [
   { id: "regioes", rotulo: "Regiões" },
 ];
 
-export default function AdminCliente({ listas }: { listas: ListasAdmin }) {
-  const [aba, setAba] = useState<Aba>("setores");
+export default function AdminCliente({
+  listas,
+  usuarios,
+}: {
+  listas: ListasAdmin;
+  usuarios: UsuarioAdmin[];
+}) {
+  const [aba, setAba] = useState<Aba>("usuarios");
 
   return (
     <div className="space-y-4">
@@ -43,6 +52,8 @@ export default function AdminCliente({ listas }: { listas: ListasAdmin }) {
           </button>
         ))}
       </div>
+
+      {aba === "usuarios" && <UsuariosCliente usuarios={usuarios} />}
 
       {aba === "setores" && (
         <ListaSimples

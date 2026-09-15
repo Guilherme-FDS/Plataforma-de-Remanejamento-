@@ -44,8 +44,9 @@ export async function middleware(request: NextRequest) {
 
   const caminho = request.nextUrl.pathname;
   const ehLogin = caminho.startsWith("/login");
+  const ehAuth = caminho.startsWith("/auth/");
 
-  if (!user && !ehLogin) {
+  if (!user && !ehLogin && !ehAuth) {
     const destino = request.nextUrl.clone();
     destino.pathname = "/login";
     destino.searchParams.set("de", caminho);
