@@ -17,12 +17,12 @@ import { historicoDoColaborador, obterColaborador } from "@/lib/dados";
 export default async function FichaColaborador({
   params,
 }: {
-  params: { matricula: string };
+  params: { id: string };
 }) {
-  const matricula = Number(params.matricula);
+  const id = Number(params.id);
   const [colaborador, historico] = await Promise.all([
-    obterColaborador(matricula),
-    historicoDoColaborador(matricula),
+    obterColaborador(id),
+    historicoDoColaborador(id),
   ]);
   if (!colaborador) notFound();
 
@@ -39,7 +39,7 @@ export default async function FichaColaborador({
     <>
       <Cabecalho
         titulo={colaborador.nome}
-        descricao={`Matrícula ${colaborador.matricula} · ${colaborador.setor ?? "setor não informado"} · ${colaborador.turno ?? "turno não informado"}`}
+        descricao={`${colaborador.matricula ? `Matrícula ${colaborador.matricula}` : "Sem matrícula — pendente de cadastro no RH"} · ${colaborador.setor ?? "setor não informado"} · ${colaborador.turno ?? "turno não informado"}`}
         acao={
           <Link
             href="/remanejamentos"

@@ -57,4 +57,66 @@ body {
   .sem-impressao {
     display: none !important;
   }
+
+  /* Mostra elementos que só existem no impresso */
+  .so-impressao {
+    display: block !important;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
+    font-size: 11pt;
+  }
+
+  main {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+
+  /* Tabelas: bordas limpas e sem hover */
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 9pt;
+  }
+
+  th, td {
+    border: 1px solid #ccc;
+    padding: 4px 8px !important;
+    background: white !important;
+    color: black !important;
+  }
+
+  th {
+    background: #f3f4f6 !important;
+    font-weight: 600;
+  }
+
+  /* Badges / selos: apenas texto */
+  .badge-impressao {
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 1px 4px;
+    font-size: 8pt;
+  }
+
+  /* Evita quebra de linha no meio de uma linha da tabela */
+  tr {
+    break-inside: avoid;
+  }
+
+  /* Cards: sem sombra, sem borda arredondada */
+  section {
+    border: 1px solid #ccc !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    break-inside: avoid;
+    margin-bottom: 12pt;
+  }
+
+  /* Gráficos não precisam aparecer no impresso */
+  .graficos-impressao {
+    display: none !important;
+  }
 }

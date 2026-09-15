@@ -39,14 +39,11 @@ export default async function Painel() {
 
   return (
     <>
-      <Cabecalho
-        titulo="Painel"
-        descricao={`Situação em ${formatarDataObj(ref)}. Tudo abaixo é calculado a partir dos lançamentos — nada é digitado à mão.`}
-      />
+      <Cabecalho titulo="Painel" />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Indicador
-          rotulo="Em carteira"
+          rotulo="Vigentes"
           valor={abertos.length}
           nota={`de ${todos.length} registros no histórico`}
           href="/remanejamentos?situacao=abertos"
@@ -146,7 +143,7 @@ export default async function Painel() {
 
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
         <Cartao
-          titulo="Carteira por setor"
+          titulo="Casos por setor"
           descricao="Somente casos em aberto."
         >
           <Barras
@@ -156,7 +153,7 @@ export default async function Painel() {
         </Cartao>
 
         <Cartao
-          titulo="Carteira por região do corpo"
+          titulo="Casos por região do corpo"
           descricao="Onde o corpo está sendo exigido."
         >
           <Barras
@@ -174,9 +171,9 @@ export default async function Painel() {
           ) : (
             <ul className="divide-y divide-slate-100">
               {reincidentes.slice(0, 8).map((p) => (
-                <li key={p.matricula}>
+                <li key={p.colaboradorId}>
                   <Link
-                    href={`/colaboradores/${p.matricula}`}
+                    href={`/colaboradores/${p.colaboradorId}`}
                     className="flex items-center justify-between gap-3 px-5 py-2.5 hover:bg-slate-50"
                   >
                     <div className="min-w-0">
@@ -229,7 +226,7 @@ function ListaCasos({
               <div className="flex items-center gap-2">
                 {r.matricula ? (
                   <Link
-                    href={`/colaboradores/${r.matricula}`}
+                    href={`/colaboradores/${r.colaboradorId}`}
                     className="truncate text-sm font-medium text-slate-900 hover:underline"
                   >
                     {r.nome}

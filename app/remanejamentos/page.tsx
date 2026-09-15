@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import Filtros from "@/components/Filtros";
+import { BotaoEncerrar } from "@/components/BotaoEncerrar";
 import { Cabecalho, Cartao, Selo, Vazio } from "@/components/ui";
 import {
   TIPO_ROTULO,
@@ -23,7 +24,7 @@ import type { Remanejamento, Situacao } from "@/lib/tipos";
 type Busca = Record<string, string | undefined>;
 
 const SITUACOES: { valor: string; rotulo: string }[] = [
-  { valor: "abertos", rotulo: "Em carteira (todos abertos)" },
+  { valor: "abertos", rotulo: "Vigentes (todos abertos)" },
   { valor: "em_andamento", rotulo: "Em andamento" },
   { valor: "a_encerrar", rotulo: "A encerrar" },
   { valor: "sem_previsao", rotulo: "Sem previsão" },
@@ -79,14 +80,6 @@ export default async function ListaRemanejamentos({
       <Cabecalho
         titulo="Remanejamentos"
         descricao={`${ordenados.length} de ${todos.length} registros.`}
-        acao={
-          <Link
-            href="/remanejamentos/novo"
-            className="rounded-md bg-gtf-700 px-3.5 py-2 text-sm font-medium text-white hover:bg-gtf-800"
-          >
-            Novo lançamento
-          </Link>
-        }
       />
 
       <Suspense fallback={<div className="mb-5 h-9" />}>
@@ -141,6 +134,7 @@ export default async function ListaRemanejamentos({
                   <th className="px-3 py-2.5 font-medium">Duração</th>
                   <th className="px-3 py-2.5 font-medium">Previsão</th>
                   <th className="px-5 py-2.5 font-medium">Situação</th>
+                  <th className="px-3 py-2.5 font-medium"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -164,7 +158,7 @@ function Linha({ r, ref_ }: { r: Remanejamento; ref_: Date }) {
     <tr className="align-top hover:bg-slate-50">
       <td className="px-5 py-3">
         <Link
-          href={`/colaboradores/${r.matricula}`}
+          href={`/colaboradores/${r.colaboradorId}`}
           className="font-medium text-slate-900 hover:underline"
         >
           {r.nome}
@@ -196,6 +190,23 @@ function Linha({ r, ref_ }: { r: Remanejamento; ref_: Date }) {
       </td>
       <td className="px-5 py-3">
         <Selo situacao={situacaoDe(r, ref_)} />
+      </td>
+      <td className="px-3 py-3">
+        {(situacaoDe(r, ref_) === "a_encerrar" ||
+          situacaoDe(r, ref_) === "em_andamento" ||
+          situacaoDe(r, ref_) === "permanente" ||
+          situacaoDe(r, ref_) === "acompanhamento" ||
+          situacaoDe(r, ref_) === "sem_previsao") && (
+          <div className="flex flex-col gap-1">
+            <Link
+              href={`/remanejamentos/${r.id}/editar`}
+              className="rounded border border-slate-200 px-2 py-1 text-xs text-slate-600 hover:bg-slate-50"
+            >
+              Editar
+            </Link>
+            <BotaoEncerrar id={r.id} />
+          </div>
+        )}
       </td>
     </tr>
   );

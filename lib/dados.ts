@@ -27,7 +27,7 @@ const TIPOS: { id: TipoRestricao; rotulo: string }[] = [
 interface LinhaView {
   id: number;
   colaborador_id: number;
-  matricula: number;
+  matricula: number | null;
   colaborador: string;
   data_inicio: string;
   duracao_tipo: Remanejamento["duracaoTipo"];
@@ -47,6 +47,7 @@ interface LinhaView {
   profissional: string | null;
   origem: string;
   linha_origem: number | null;
+  possivel_duplicata_de: number | null;
 }
 
 function converter(l: LinhaView): Remanejamento {
@@ -73,6 +74,7 @@ function converter(l: LinhaView): Remanejamento {
     profissional: l.profissional,
     origem: l.origem,
     linhaOrigem: l.linha_origem,
+    possivelDuplicataDe: l.possivel_duplicata_de,
   };
 }
 
@@ -106,7 +108,7 @@ export const listarColaboradores = cache(async (): Promise<Colaborador[]> => {
   return (data ?? []).map((c) => {
     const linha = c as unknown as {
       id: number;
-      matricula: number;
+      matricula: number | null;
       nome: string;
       setores: { nome: string } | null;
       turnos: { nome: string } | null;
@@ -212,18 +214,65 @@ export const listarPendencias = cache(async (): Promise<Pendencia[]> => {
   });
 });
 
+/**
+ * Busca pelo id interno diretamente — não carrega todos os colaboradores.
+ */
 export async function obterColaborador(
-  matricula: number,
+  id: number,
 ): Promise<Colaborador | undefined> {
-  const todos = await listarColaboradores();
-  return todos.find((c) => c.matricula === matricula);
+  const supabase = clienteServidor();
+  const { data } = await supabase
+    .from("colaboradores")
+    .select("id, matricula, nome, setores(nome), turnos(nome)")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (!data) return undefined;
+
+  const linha = data as unknown as {
+    id: number;
+    matricula: number | null;
+    nome: string;
+    setores: { nome: string } | null;
+    turnos: { nome: string } | null;
+  };
+  return {
+    id: linha.id,
+    matricula: linha.matricula,
+    nome: linha.nome,
+    setor: linha.setores?.nome ?? null,
+    turno: linha.turnos?.nome ?? null,
+  };
 }
 
+/** Busca um remanejamento pelo id para pré-preencher o formulário de edição. */
+export async function obterRemanejamento(
+  id: number,
+): Promise<Remanejamento | undefined> {
+  const supabase = clienteServidor();
+  const { data, error } = await supabase
+    .from("vw_remanejamentos")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error || !data) return undefined;
+  return converter(data as LinhaView);
+}
+
+/** Busca o histórico de um colaborador diretamente pelo id — não carrega tudo. */
 export async function historicoDoColaborador(
-  matricula: number,
+  id: number,
 ): Promise<Remanejamento[]> {
-  const todos = await listarRemanejamentos();
-  return todos.filter((r) => r.matricula === matricula);
+  const supabase = clienteServidor();
+  const { data, error } = await supabase
+    .from("vw_remanejamentos")
+    .select("*")
+    .eq("colaborador_id", id)
+    .order("data_inicio", { ascending: false });
+
+  if (error) throw new Error(`Falha ao ler histórico: ${error.message}`);
+  return (data as LinhaView[]).map(converter);
 }
 
 /**
@@ -255,6 +304,71 @@ export const sugestoesContraindicacao = cache(
   },
 );
 
+export interface ItemLista {
+  id: number;
+  nome: string;
+  ativo: boolean;
+}
+
+export interface SegmentoAdmin extends ItemLista {
+  regiao: string;
+  regiaoId: number;
+}
+
+export interface ListasAdmin {
+  setores: ItemLista[];
+  turnos: ItemLista[];
+  supervisores: ItemLista[];
+  profissionais: ItemLista[];
+  regioes: ItemLista[];
+  segmentos: SegmentoAdmin[];
+}
+
+export const obterListasAdmin = cache(async (): Promise<ListasAdmin> => {
+  const supabase = clienteServidor();
+
+  const [setores, turnos, supervisores, profissionais, regioes, segmentos] =
+    await Promise.all([
+      supabase.from("setores").select("id, nome, ativo").order("nome"),
+      supabase.from("turnos").select("id, nome").order("nome"),
+      supabase.from("supervisores").select("id, nome, ativo").order("nome"),
+      supabase.from("profissionais").select("id, nome, ativo").order("nome"),
+      supabase.from("regioes_corporais").select("id, nome").order("nome"),
+      supabase
+        .from("segmentos")
+        .select("id, nome, ativo, regioes_corporais(id, nome)")
+        .order("nome"),
+    ]);
+
+  const mapItem = (r: { data: { id: number; nome: string; ativo?: boolean }[] | null }) =>
+    (r.data ?? []).map((x) => ({ id: x.id, nome: x.nome, ativo: x.ativo ?? true }));
+
+  const segs: SegmentoAdmin[] = (segmentos.data ?? []).map((s) => {
+    const linha = s as unknown as {
+      id: number;
+      nome: string;
+      ativo: boolean;
+      regioes_corporais: { id: number; nome: string } | null;
+    };
+    return {
+      id: linha.id,
+      nome: linha.nome,
+      ativo: linha.ativo,
+      regiao: linha.regioes_corporais?.nome ?? "—",
+      regiaoId: linha.regioes_corporais?.id ?? 0,
+    };
+  });
+
+  return {
+    setores: mapItem(setores),
+    turnos: mapItem(turnos),
+    supervisores: mapItem(supervisores),
+    profissionais: mapItem(profissionais),
+    regioes: mapItem(regioes),
+    segmentos: segs,
+  };
+});
+
 /**
  * Perfil do usuário logado, ou null se não houver sessão.
  *
@@ -273,7 +387,7 @@ export async function perfilAtual() {
 
     const { data } = await supabase
       .from("perfis")
-      .select("nome, funcao, admin, ativo")
+      .select("nome, funcao, admin, ativo, papel")
       .eq("id", user.id)
       .maybeSingle();
 

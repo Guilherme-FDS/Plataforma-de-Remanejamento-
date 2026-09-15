@@ -1,10 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
-import { salvarRemanejamento } from "@/app/actions/remanejamentos";
+import { useRouter } from "next/navigation";
+import { editarRemanejamento } from "@/app/actions/remanejamentos";
 import { formatarDataObj, somarDias } from "@/lib/calculos";
-import type { Colaborador, DuracaoTipo, Listas, TipoRestricao } from "@/lib/tipos";
+import type { DuracaoTipo, Listas, Remanejamento, TipoRestricao } from "@/lib/tipos";
 
 const DURACOES: { valor: DuracaoTipo; rotulo: string }[] = [
   { valor: "dias", rotulo: "Prazo em dias" },
@@ -20,73 +20,39 @@ const rotuloCampo =
 const campo =
   "h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-gtf-600 focus:outline-none focus:ring-1 focus:ring-gtf-600";
 
-export default function FormularioLancamento({
-  colaboradores,
+export default function FormularioEdicao({
+  remanj,
   listas,
-  sugestoes,
 }: {
-  colaboradores: Colaborador[];
+  remanj: Remanejamento;
   listas: Listas;
-  sugestoes: Record<string, string[]>;
 }) {
-  const hojeIso = new Date().toISOString().slice(0, 10);
-
-  const [matricula, setMatricula] = useState("");
-  const [nome, setNome] = useState("");
-  const [setor, setSetor] = useState("");
-  const [turno, setTurno] = useState("");
-  const [supervisor, setSupervisor] = useState("");
-  const [dataInicio, setDataInicio] = useState(hojeIso);
-  const [duracaoTipo, setDuracaoTipo] = useState<DuracaoTipo>("dias");
-  const [duracaoDias, setDuracaoDias] = useState<number | "">(30);
-  const [causa, setCausa] = useState("");
-  const [segmento, setSegmento] = useState("");
-  const [lateralidade, setLateralidade] = useState("");
-  const [contraindicacao, setContraindicacao] = useState("");
-  const [tipo, setTipo] = useState<TipoRestricao | "">("");
-  const [profissional, setProfissional] = useState("");
-  const [observacoes, setObservacoes] = useState("");
-  const [salvo, setSalvo] = useState<{ colaboradorId: number } | null>(null);
+  const router = useRouter();
+  const [setor, setSetor] = useState(remanj.setor ?? "");
+  const [turno, setTurno] = useState(remanj.turno ?? "");
+  const [supervisor, setSupervisor] = useState(remanj.supervisor ?? "");
+  const [dataInicio, setDataInicio] = useState(remanj.dataInicio);
+  const [duracaoTipo, setDuracaoTipo] = useState<DuracaoTipo>(remanj.duracaoTipo);
+  const [duracaoDias, setDuracaoDias] = useState<number | "">(remanj.duracaoDias ?? "");
+  const [causa, setCausa] = useState(remanj.causa ?? "");
+  const [segmento, setSegmento] = useState(remanj.segmento ?? "");
+  const [lateralidade, setLateralidade] = useState(remanj.lateralidade ?? "");
+  const [contraindicacao, setContraindicacao] = useState(remanj.contraindicacao ?? "");
+  const [tipo, setTipo] = useState<TipoRestricao | "">(remanj.tipo);
+  const [profissional, setProfissional] = useState(remanj.profissional ?? "");
+  const [observacoes, setObservacoes] = useState(remanj.observacoes ?? "");
   const [erro, setErro] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  const porMatricula = useMemo(() => {
-    const m = new Map<number, Colaborador>();
-    // Quem ainda nao tem matricula fica fora da busca por matricula - esta
-    // listado em Pendencias, aguardando o numero vir do RH.
-    for (const c of colaboradores) {
-      if (c.matricula !== null) m.set(c.matricula, c);
-    }
-    return m;
-  }, [colaboradores]);
-
-  const encontrado = porMatricula.get(Number(matricula));
-
-  // Segmentos válidos: os que foram classificados numa região conhecida.
-  const segmentosValidos = useMemo(
-    () => listas.segmentos.filter((s) => s.regiao !== "Não classificado"),
-    [listas.segmentos],
-  );
-
   const porRegiao = useMemo(() => {
     const grupos = new Map<string, string[]>();
-    for (const s of segmentosValidos) {
+    for (const s of listas.segmentos.filter((s) => s.regiao !== "Não classificado")) {
       const lista = grupos.get(s.regiao) ?? [];
       lista.push(s.nome);
       grupos.set(s.regiao, lista);
     }
     return [...grupos.entries()].sort((a, b) => a[0].localeCompare(b[0]));
-  }, [segmentosValidos]);
-
-  function aplicarMatricula(valor: string) {
-    setMatricula(valor);
-    const c = porMatricula.get(Number(valor));
-    if (c) {
-      setNome(c.nome);
-      setSetor(c.setor ?? "");
-      setTurno(c.turno ?? "");
-    }
-  }
+  }, [listas.segmentos]);
 
   const previsao = useMemo(() => {
     if (duracaoTipo !== "dias" || !duracaoDias || !dataInicio) return null;
@@ -95,11 +61,7 @@ export default function FormularioLancamento({
     return somarDias(new Date(a, m - 1, d), Number(duracaoDias));
   }, [duracaoTipo, duracaoDias, dataInicio]);
 
-  const sugestoesDoSegmento = segmento ? (sugestoes[segmento] ?? []) : [];
-
   const faltando = [
-    !matricula && "matrícula",
-    !nome && "nome",
     !setor && "setor",
     !turno && "turno",
     !dataInicio && "data de início",
@@ -113,9 +75,7 @@ export default function FormularioLancamento({
     if (faltando.length > 0) return;
     setErro(null);
     startTransition(async () => {
-      const res = await salvarRemanejamento({
-        matricula: matricula ? Number(matricula) : null,
-        nome,
+      const res = await editarRemanejamento(remanj.id, {
         setor,
         turno,
         supervisor: supervisor || null,
@@ -130,136 +90,44 @@ export default function FormularioLancamento({
         profissional: profissional || null,
         observacoes: observacoes || null,
       });
-      if (res.ok && res.colaboradorId) {
-        setSalvo({ colaboradorId: res.colaboradorId });
-        window.scrollTo({ top: 0, behavior: "smooth" });
+      if (res.ok) {
+        router.push(`/colaboradores/${remanj.colaboradorId}`);
       } else {
-        setErro(res.erro ?? "Erro ao salvar. Tente novamente.");
+        setErro(res.erro ?? "Erro ao salvar.");
       }
     });
   }
 
-  function limpar() {
-    setMatricula("");
-    setNome("");
-    setSetor("");
-    setTurno("");
-    setSupervisor("");
-    setDataInicio(hojeIso);
-    setDuracaoTipo("dias");
-    setDuracaoDias(30);
-    setCausa("");
-    setSegmento("");
-    setLateralidade("");
-    setContraindicacao("");
-    setTipo("");
-    setProfissional("");
-    setObservacoes("");
-    setSalvo(null);
-    setErro(null);
-  }
-
-  if (salvo) {
-    return (
-      <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-6">
-        <h2 className="text-base font-semibold text-emerald-900">
-          Lançamento salvo
-        </h2>
-        <p className="mt-1 text-sm text-emerald-800">
-          O registro foi gravado com sucesso.
-        </p>
-        <div className="mt-4 flex flex-wrap gap-3">
-          <button
-            type="button"
-            onClick={limpar}
-            className="rounded-md bg-gtf-700 px-4 py-2 text-sm font-medium text-white hover:bg-gtf-800"
-          >
-            Lançar outro
-          </button>
-          <Link
-            href={`/colaboradores/${salvo.colaboradorId}`}
-            className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-          >
-            Ver ficha do colaborador
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <form onSubmit={enviar} className="space-y-5">
-      {/* ---------------------------------------------------- colaborador */}
-      <fieldset className="rounded-xl border border-slate-200 bg-white p-5">
+      {/* Identificação — somente leitura */}
+      <fieldset className="rounded-xl border border-slate-200 bg-slate-50 p-5">
         <legend className="px-1 text-sm font-semibold text-slate-900">
           Colaborador
         </legend>
-
         <div className="grid gap-4 sm:grid-cols-3">
           <div>
-            <label className={rotuloCampo} htmlFor="matricula">
-              Matrícula
-            </label>
-            <input
-              id="matricula"
-              inputMode="numeric"
-              value={matricula}
-              onChange={(e) =>
-                aplicarMatricula(e.target.value.replace(/\D/g, ""))
-              }
-              placeholder="00000"
-              className={campo}
-              autoFocus
-            />
-            {matricula && (
-              <p
-                className={`mt-1 text-xs ${encontrado ? "text-emerald-600" : "text-amber-600"}`}
-              >
-                {encontrado ? "Já cadastrado" : "Novo colaborador"}
-              </p>
-            )}
+            <p className={rotuloCampo}>Matrícula</p>
+            <p className="flex h-10 items-center rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-500">
+              {remanj.matricula ?? "—"}
+            </p>
           </div>
-
           <div className="sm:col-span-2">
-            <label className={rotuloCampo} htmlFor="nome">
-              Nome
-            </label>
-            <input
-              id="nome"
-              value={nome}
-              onChange={(e) => setNome(e.target.value)}
-              className={campo}
-              readOnly={!!encontrado}
-            />
+            <p className={rotuloCampo}>Nome</p>
+            <p className="flex h-10 items-center rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-500">
+              {remanj.nome}
+            </p>
           </div>
         </div>
 
         <div className="mt-4 grid gap-4 sm:grid-cols-3">
-          <Select
-            id="setor"
-            rotulo="Setor"
-            valor={setor}
-            aoMudar={setSetor}
-            opcoes={listas.setores}
-          />
-          <Select
-            id="turno"
-            rotulo="Turno"
-            valor={turno}
-            aoMudar={setTurno}
-            opcoes={listas.turnos}
-          />
-          <Select
-            id="supervisor"
-            rotulo="Supervisor"
-            valor={supervisor}
-            aoMudar={setSupervisor}
-            opcoes={listas.supervisores}
-          />
+          <Select id="setor" rotulo="Setor" valor={setor} aoMudar={setSetor} opcoes={listas.setores} />
+          <Select id="turno" rotulo="Turno" valor={turno} aoMudar={setTurno} opcoes={listas.turnos} />
+          <Select id="supervisor" rotulo="Supervisor" valor={supervisor} aoMudar={setSupervisor} opcoes={listas.supervisores} />
         </div>
       </fieldset>
 
-      {/* -------------------------------------------------------- restrição */}
+      {/* Restrição */}
       <fieldset className="rounded-xl border border-slate-200 bg-white p-5">
         <legend className="px-1 text-sm font-semibold text-slate-900">
           Restrição
@@ -280,9 +148,7 @@ export default function FormularioLancamento({
               {porRegiao.map(([regiao, nomes]) => (
                 <optgroup key={regiao} label={regiao}>
                   {nomes.map((n) => (
-                    <option key={n} value={n}>
-                      {n}
-                    </option>
+                    <option key={n} value={n}>{n}</option>
                   ))}
                 </optgroup>
               ))}
@@ -323,7 +189,6 @@ export default function FormularioLancamento({
             id="causa"
             value={causa}
             onChange={(e) => setCausa(e.target.value)}
-            placeholder="Tendinopatia do ombro"
             className={campo}
           />
         </div>
@@ -337,29 +202,8 @@ export default function FormularioLancamento({
             value={contraindicacao}
             onChange={(e) => setContraindicacao(e.target.value)}
             rows={3}
-            placeholder="O que o colaborador não pode fazer"
             className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-gtf-600 focus:outline-none focus:ring-1 focus:ring-gtf-600"
           />
-          {sugestoesDoSegmento.length > 0 && (
-            <div className="mt-2">
-              <p className="mb-1.5 text-xs text-slate-500">
-                Já usadas para {segmento}:
-              </p>
-              <div className="flex flex-wrap gap-1.5">
-                {sugestoesDoSegmento.map((s) => (
-                  <button
-                    key={s}
-                    type="button"
-                    onClick={() => setContraindicacao(s)}
-                    title={s}
-                    className="max-w-full truncate rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs text-slate-600 transition hover:border-slate-400 hover:text-slate-900"
-                  >
-                    {s.length > 60 ? `${s.slice(0, 60)}…` : s}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
 
         <div className="mt-4">
@@ -385,7 +229,7 @@ export default function FormularioLancamento({
         </div>
       </fieldset>
 
-      {/* ---------------------------------------------------------- prazo */}
+      {/* Prazo */}
       <fieldset className="rounded-xl border border-slate-200 bg-white p-5">
         <legend className="px-1 text-sm font-semibold text-slate-900">
           Prazo
@@ -415,9 +259,7 @@ export default function FormularioLancamento({
               className={campo}
             >
               {DURACOES.map((d) => (
-                <option key={d.valor} value={d.valor}>
-                  {d.rotulo}
-                </option>
+                <option key={d.valor} value={d.valor}>{d.rotulo}</option>
               ))}
             </select>
           </div>
@@ -472,7 +314,7 @@ export default function FormularioLancamento({
         </div>
       </fieldset>
 
-      {/* ----------------------------------------------------- responsável */}
+      {/* Registro */}
       <fieldset className="rounded-xl border border-slate-200 bg-white p-5">
         <legend className="px-1 text-sm font-semibold text-slate-900">
           Registro
@@ -505,15 +347,15 @@ export default function FormularioLancamento({
           disabled={faltando.length > 0 || pending}
           className="rounded-md bg-gtf-700 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-300"
         >
-          {pending ? "Salvando…" : "Salvar lançamento"}
+          {pending ? "Salvando…" : "Salvar alterações"}
         </button>
         <button
           type="button"
-          onClick={limpar}
+          onClick={() => router.back()}
           disabled={pending}
           className="rounded-md px-3 py-2.5 text-sm font-medium text-slate-500 hover:text-slate-900 disabled:opacity-50"
         >
-          Limpar
+          Cancelar
         </button>
         {faltando.length > 0 && (
           <p className="text-xs text-slate-500">Falta: {faltando.join(", ")}.</p>
@@ -550,9 +392,7 @@ function Select({
       >
         <option value="">Selecione…</option>
         {opcoes.map((o) => (
-          <option key={o} value={o}>
-            {o}
-          </option>
+          <option key={o} value={o}>{o}</option>
         ))}
       </select>
     </div>

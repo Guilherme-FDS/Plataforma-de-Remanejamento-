@@ -8,11 +8,25 @@ const ITENS = [
   { href: "/", rotulo: "Painel", icone: IconePainel },
   { href: "/remanejamentos", rotulo: "Casos", icone: IconeLista },
   { href: "/indicadores", rotulo: "Indicadores", icone: IconeGrafico },
+  { href: "/relatorios", rotulo: "Relatórios", icone: IconeRelatorio },
   { href: "/pendencias", rotulo: "Pendências", icone: IconeAlerta },
+  { href: "/admin", rotulo: "Config.", icone: IconeConfig },
 ];
 
 function estaAtivo(caminho: string, href: string) {
   return href === "/" ? caminho === "/" : caminho.startsWith(href);
+}
+
+/** "Maria Calsavara" -> "MC". Primeiro e último nome, ignorando partículas. */
+function iniciais(nome: string) {
+  const partes = nome
+    .trim()
+    .split(/\s+/)
+    .filter((p) => !["de", "da", "do", "das", "dos", "e"].includes(p.toLowerCase()));
+  if (partes.length === 0) return "?";
+  const primeira = partes[0][0];
+  const ultima = partes.length > 1 ? partes[partes.length - 1][0] : "";
+  return (primeira + ultima).toUpperCase();
 }
 
 export default function Nav({ usuario }: { usuario: string | null }) {
@@ -61,20 +75,31 @@ export default function Nav({ usuario }: { usuario: string | null }) {
             </Link>
 
             {usuario && (
-              <>
-                <span className="hidden max-w-40 truncate text-sm text-slate-500 lg:inline">
+              <div className="flex items-center gap-2 border-l border-slate-200 pl-2 sm:gap-3 sm:pl-3">
+                {/* Quem está logado precisa ficar visível: o aparelho é
+                    compartilhado entre a equipe, e lançar no login errado
+                    grava o profissional errado no prontuário. */}
+                <span
+                  className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-gtf-50 text-xs font-semibold text-gtf-700"
+                  title={usuario}
+                  aria-hidden
+                >
+                  {iniciais(usuario)}
+                </span>
+                <span className="hidden max-w-40 truncate text-sm text-slate-600 lg:inline">
                   {usuario}
                 </span>
+
                 <form action="/auth/sair" method="post" className="flex">
                   <button
                     type="submit"
-                    aria-label="Sair"
-                    className="grid h-9 w-9 place-items-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-900"
+                    className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-2 text-sm font-medium text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
                   >
                     <IconeSair />
+                    Sair
                   </button>
                 </form>
-              </>
+              </div>
             )}
           </div>
         </div>
@@ -163,10 +188,28 @@ function IconeAlerta() {
   );
 }
 
+function IconeRelatorio() {
+  return (
+    <Base>
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" />
+      <path d="M14 2v6h6M8 13h8M8 17h5" />
+    </Base>
+  );
+}
+
 function IconeSair() {
   return (
     <Base>
       <path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l-5-5 5-5M5 12h12" />
+    </Base>
+  );
+}
+
+function IconeConfig() {
+  return (
+    <Base>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" />
     </Base>
   );
 }

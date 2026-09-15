@@ -32,7 +32,8 @@ export type Situacao =
 
 export interface Colaborador {
   id: number;
-  matricula: number;
+  /** Pode faltar: a planilha tinha registros sem código. */
+  matricula: number | null;
   nome: string;
   setor: string | null;
   turno: string | null;
@@ -41,7 +42,7 @@ export interface Colaborador {
 export interface Remanejamento {
   id: number;
   colaboradorId: number;
-  matricula: number;
+  matricula: number | null;
   nome: string;
 
   dataInicio: string;
@@ -68,6 +69,8 @@ export interface Remanejamento {
   /** 'planilha' para o que veio da importação, 'sistema' para o resto. */
   origem: string;
   linhaOrigem: number | null;
+  /** Preenchido quando a planilha repetiu o mesmo caso em duas linhas. */
+  possivelDuplicataDe: number | null;
 }
 
 export interface Pendencia {

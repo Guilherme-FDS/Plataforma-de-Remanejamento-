@@ -47,7 +47,6 @@ export default async function Indicadores({
     <>
       <Cabecalho
         titulo="Indicadores"
-        descricao="Tudo calculado a partir dos lançamentos. Nenhum número é digitado."
         acao={
           <div className="flex gap-1.5">
             {anos.map((a) => (
@@ -102,7 +101,6 @@ export default async function Indicadores({
       <Cartao
         className="mt-6"
         titulo={`Casos por mês — ${ano} contra ${anterior}`}
-        descricao="A planilha não conseguia fazer esta comparação: os dois anos estavam misturados na mesma coluna, sem campo de ano."
       >
         <SerieMensal
           atual={serieAno}
@@ -113,33 +111,45 @@ export default async function Indicadores({
       </Cartao>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <Cartao
-          titulo="Região do corpo"
-          descricao="Para onde apontar a análise ergonômica."
-        >
-          <Barras itens={contarPor(doAno, (r) => r.regiao)} />
+        <Cartao titulo="Região do corpo">
+          <Barras
+            itens={contarPor(doAno, (r) => r.regiao)}
+            href={(r) =>
+              `/remanejamentos?regiao=${encodeURIComponent(r)}&ano=${ano}`
+            }
+          />
         </Cartao>
 
-        <Cartao titulo="Setor" descricao="Contagem absoluta de casos.">
-          <Barras itens={contarPor(doAno, (r) => r.setor)} />
-          <p className="border-t border-slate-100 px-5 py-3 text-xs leading-snug text-slate-500">
-            Contagem bruta não diz qual setor está pior — um setor com 400
-            pessoas e 13 casos está melhor que um com 20 pessoas e 6. Com o
-            efetivo de cada setor, isto vira <strong>incidência por 100
-            colaboradores</strong>, que é o número acionável.
-          </p>
+        <Cartao titulo="Setor">
+          <Barras
+            itens={contarPor(doAno, (r) => r.setor)}
+            href={(s) =>
+              `/remanejamentos?setor=${encodeURIComponent(s)}&ano=${ano}`
+            }
+          />
         </Cartao>
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
-        <Cartao titulo="Tipo" descricao="Natureza do afastamento.">
+        <Cartao titulo="Tipo">
           <Barras
             itens={contarPor(doAno, (r) => TIPO_ROTULO[r.tipo])}
+            href={(label) => {
+              const id =
+                Object.entries(TIPO_ROTULO).find(([, v]) => v === label)?.[0] ??
+                label;
+              return `/remanejamentos?tipo=${encodeURIComponent(id)}&ano=${ano}`;
+            }}
           />
         </Cartao>
 
         <Cartao titulo="Turno">
-          <Barras itens={contarPor(doAno, (r) => r.turno)} />
+          <Barras
+            itens={contarPor(doAno, (r) => r.turno)}
+            href={(t) =>
+              `/remanejamentos?turno=${encodeURIComponent(t)}&ano=${ano}`
+            }
+          />
         </Cartao>
 
         <Cartao titulo="Profissional responsável">
@@ -151,7 +161,6 @@ export default async function Indicadores({
         <Cartao
           className="mt-6"
           titulo={`Como a classificação mudou entre ${anterior} e ${ano}`}
-          descricao="Mudança grande na proporção clínico/ocupacional costuma indicar mudança de critério de classificação, não de perfil de adoecimento — e altera obrigação de CAT, PPP e eSocial. Vale confirmar internamente."
         >
           <ComparativoTipo atual={doAno} anterior={doAnterior} rotuloAtual={String(ano)} rotuloAnterior={String(anterior)} />
         </Cartao>
@@ -160,16 +169,15 @@ export default async function Indicadores({
       <Cartao
         className="mt-6"
         titulo="Reincidência"
-        descricao="Quem voltou a ser remanejado. Reincidência na mesma região sugere que o posto não foi resolvido."
       >
         {reincidentes.length === 0 ? (
           <Vazio>Nenhum colaborador com mais de um caso em {ano}.</Vazio>
         ) : (
           <ul className="divide-y divide-slate-100">
             {reincidentes.map((p) => (
-              <li key={p.matricula} className="px-5 py-3">
+              <li key={p.colaboradorId} className="px-5 py-3">
                 <a
-                  href={`/colaboradores/${p.matricula}`}
+                  href={`/colaboradores/${p.colaboradorId}`}
                   className="text-sm font-medium text-slate-900 hover:underline"
                 >
                   {p.nome}

@@ -171,7 +171,8 @@ export function estatisticaDuracao(itens: Remanejamento[]): {
 }
 
 export interface Reincidencia {
-  matricula: number;
+  colaboradorId: number;
+  matricula: number | null;
   nome: string;
   eventos: Remanejamento[];
   mesmaRegiao: boolean;
@@ -182,13 +183,14 @@ export interface Reincidencia {
 export function reincidencias(itens: Remanejamento[]): Reincidencia[] {
   const porPessoa = new Map<number, Remanejamento[]>();
   for (const r of itens) {
-    const lista = porPessoa.get(r.matricula) ?? [];
+    if (r.possivelDuplicataDe) continue; // duplicata nao e reincidencia
+    const lista = porPessoa.get(r.colaboradorId) ?? [];
     lista.push(r);
-    porPessoa.set(r.matricula, lista);
+    porPessoa.set(r.colaboradorId, lista);
   }
 
   const saida: Reincidencia[] = [];
-  for (const [matricula, eventos] of porPessoa) {
+  for (const [colaboradorId, eventos] of porPessoa) {
     if (eventos.length < 2) continue;
     const ordenados = [...eventos].sort((a, b) =>
       (a.dataInicio ?? "").localeCompare(b.dataInicio ?? ""),
@@ -197,7 +199,8 @@ export function reincidencias(itens: Remanejamento[]): Reincidencia[] {
     const primeira = data(ordenados[0].dataInicio);
     const ultima = data(ordenados[ordenados.length - 1].dataInicio);
     saida.push({
-      matricula,
+      colaboradorId,
+      matricula: ordenados[0].matricula,
       nome: ordenados[0].nome,
       eventos: ordenados,
       mesmaRegiao: regioes.size === 1,
