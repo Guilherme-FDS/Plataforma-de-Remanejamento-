@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "remanejamentos",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "codigo", "run", "dev"],
+      "port": 3000
+    }
+  ]
+}

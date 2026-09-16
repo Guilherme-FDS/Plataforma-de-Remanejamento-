@@ -189,3 +189,38 @@ export function Vazio({ children }: { children: ReactNode }) {
     <p className="px-5 py-8 text-center text-sm text-slate-400">{children}</p>
   );
 }
+
+/** Modal simples, centralizado, fecha ao clicar fora ou no X. */
+export function Modal({
+  titulo,
+  onFechar,
+  children,
+}: {
+  titulo: string;
+  onFechar: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4"
+      onClick={onFechar}
+    >
+      <div
+        className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-xl bg-white shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3.5">
+          <h2 className="text-sm font-semibold text-slate-900">{titulo}</h2>
+          <button
+            onClick={onFechar}
+            className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+            aria-label="Fechar"
+          >
+            ✕
+          </button>
+        </div>
+        <div className="px-5 py-4">{children}</div>
+      </div>
+    </div>
+  );
+}

@@ -17,8 +17,10 @@ export default async function PaginaEditar({
     perfilAtual(),
   ]);
 
-  // Visualizador não edita — bloqueia acesso direto pela URL.
-  if (perfil?.papel !== "operador") redirect("/remanejamentos");
+  // Visualizador não edita — bloqueia acesso direto pela URL. Lançador e
+  // operador podem.
+  if (perfil?.papel !== "lancador" && perfil?.papel !== "operador")
+    redirect("/remanejamentos");
 
   if (!remanj) notFound();
 

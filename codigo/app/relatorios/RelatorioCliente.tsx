@@ -8,11 +8,13 @@ import {
   contarPor,
   descreverSegmento,
   estaAberto,
+  filtrarRelatorio,
   formatarData,
   formatarDataObj,
   hoje,
   previsaoFim,
   situacaoDe,
+  type SituacaoRelatorio,
 } from "@/lib/calculos";
 import type { Remanejamento } from "@/lib/tipos";
 
@@ -26,19 +28,13 @@ export default function RelatorioCliente({
   const refObj = useRef(hoje());
   const ref = refObj.current;
   const [setoresSel, setSetoresSel] = useState<string[]>([]);
-  const [situacaoSel, setSituacaoSel] = useState<string>("todos");
-  const [formatoExport, setFormatoExport] = useState<"csv" | "pdf">("csv");
+  const [situacaoSel, setSituacaoSel] = useState<SituacaoRelatorio>("todos");
+  const [formatoExport, setFormatoExport] = useState<"xlsx" | "pdf">("xlsx");
 
-  const filtrados = useMemo(() => {
-    return todos.filter((r) => {
-      if (setoresSel.length > 0 && !setoresSel.includes(r.setor ?? ""))
-        return false;
-      if (situacaoSel === "abertos") return estaAberto(r, ref);
-      if (situacaoSel === "encerrados")
-        return !estaAberto(r, ref) && !!r.dataEncerramento;
-      return true;
-    });
-  }, [todos, setoresSel, situacaoSel]); // ref é estável (useRef)
+  const filtrados = useMemo(
+    () => filtrarRelatorio(todos, { setores: setoresSel, situacao: situacaoSel }, ref),
+    [todos, setoresSel, situacaoSel, ref],
+  );
 
   const abertos = filtrados.filter((r) => estaAberto(r, ref));
 
@@ -48,52 +44,37 @@ export default function RelatorioCliente({
     );
   }
 
-  function exportarCSV() {
-    const cabecalho = [
-      "Nome",
-      "Matrícula",
-      "Setor",
-      "Turno",
-      "Início",
-      "Situação",
-      "Segmento",
-      "Tipo",
-      "Previsão Fim",
-      "Encerramento",
-      "Causa",
-      "Contraindicação",
-    ];
+  async function exportarXLSX() {
+    // Import dinâmico: a biblioteca só entra no bundle de quem realmente
+    // exporta, em vez de pesar o carregamento inicial de Relatórios.
+    const XLSX = await import("xlsx");
 
-    const linhas = filtrados.map((r) => [
-      r.nome,
-      r.matricula ?? "",
-      r.setor ?? "",
-      r.turno ?? "",
-      formatarData(r.dataInicio),
-      SITUACAO_ROTULO[situacaoDe(r, ref)],
-      descreverSegmento(r),
-      TIPO_ROTULO[r.tipo],
-      formatarDataObj(previsaoFim(r)),
-      formatarData(r.dataEncerramento),
-      r.causa ?? "",
-      r.contraindicacao ?? "",
-    ]);
+    const linhas = filtrados.map((r) => ({
+      Nome: r.nome,
+      Matrícula: r.matricula ?? "",
+      Setor: r.setor ?? "",
+      Turno: r.turno ?? "",
+      Início: formatarData(r.dataInicio),
+      Situação: SITUACAO_ROTULO[situacaoDe(r, ref)],
+      Segmento: descreverSegmento(r),
+      Tipo: TIPO_ROTULO[r.tipo],
+      "Previsão Fim": formatarDataObj(previsaoFim(r)),
+      Encerramento: formatarData(r.dataEncerramento),
+      Causa: r.causa ?? "",
+      Contraindicação: r.contraindicacao ?? "",
+    }));
 
-    const csv = [cabecalho, ...linhas]
-      .map((row) =>
-        row.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(","),
-      )
-      .join("\n");
+    const planilha = XLSX.utils.json_to_sheet(linhas);
+    const livro = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(livro, planilha, "Relatório");
+    XLSX.writeFile(livro, `relatorio_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  }
 
-    const blob = new Blob(["﻿" + csv], {
-      type: "text/csv;charset=utf-8",
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `relatorio_${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+  function abrirImpressao() {
+    const params = new URLSearchParams();
+    if (setoresSel.length > 0) params.set("setores", setoresSel.join(","));
+    if (situacaoSel !== "todos") params.set("situacao", situacaoSel);
+    window.open(`/relatorios/imprimir?${params.toString()}`, "_blank");
   }
 
   const dataGeracao = formatarDataObj(ref);
@@ -159,11 +140,13 @@ export default function RelatorioCliente({
                 Situação
               </p>
               <div className="flex flex-wrap gap-2">
-                {[
-                  { v: "todos", r: "Todos" },
-                  { v: "abertos", r: "Em aberto" },
-                  { v: "encerrados", r: "Encerrados" },
-                ].map((o) => (
+                {(
+                  [
+                    { v: "todos", r: "Todos" },
+                    { v: "abertos", r: "Em aberto" },
+                    { v: "encerrados", r: "Encerrados" },
+                  ] as { v: SituacaoRelatorio; r: string }[]
+                ).map((o) => (
                   <button
                     key={o.v}
                     onClick={() => setSituacaoSel(o.v)}
@@ -246,7 +229,7 @@ export default function RelatorioCliente({
         <div className="sem-impressao flex flex-wrap items-center justify-end gap-3 px-5 py-3 border-b border-slate-100">
           {/* Seletor de formato */}
           <div className="flex rounded-md border border-slate-200 overflow-hidden text-sm">
-            {(["csv", "pdf"] as const).map((f) => (
+            {(["xlsx", "pdf"] as const).map((f) => (
               <button
                 key={f}
                 onClick={() => setFormatoExport(f)}
@@ -262,12 +245,12 @@ export default function RelatorioCliente({
           </div>
           <button
             onClick={() =>
-              formatoExport === "csv" ? exportarCSV() : window.print()
+              formatoExport === "xlsx" ? exportarXLSX() : abrirImpressao()
             }
             disabled={filtrados.length === 0}
             className="rounded-md bg-gtf-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-gtf-800 disabled:cursor-not-allowed disabled:bg-slate-300"
           >
-            {formatoExport === "csv" ? "Exportar CSV" : "Gerar PDF"}
+            {formatoExport === "xlsx" ? "Exportar XLSX" : "Gerar PDF"}
           </button>
         </div>
 

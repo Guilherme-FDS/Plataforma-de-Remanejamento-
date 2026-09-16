@@ -2,13 +2,36 @@
 
 import { revalidatePath } from "next/cache";
 import { clienteServidor } from "@/lib/supabase-servidor";
+import { unidadeAtivaCookie } from "@/lib/unidade-ativa";
 
-async function verificarOperador() {
+type SupabaseCliente = ReturnType<typeof clienteServidor>;
+
+/**
+ * Resolve em que unidade a ação escreve: a "unidade ativa" escolhida no
+ * seletor do Nav, se o usuário realmente tiver acesso a ela — senão a
+ * unidade de casa. Nunca confia cegamente no cookie: sempre revalida contra
+ * `minhas_unidades_permitidas()` no banco antes de usar para escrita.
+ */
+async function resolverUnidadeEscrita(
+  supabase: SupabaseCliente,
+  unidadeHome: number,
+): Promise<number> {
+  const idCookie = unidadeAtivaCookie();
+  if (!idCookie || idCookie === unidadeHome) return unidadeHome;
+
+  const { data } = await supabase.rpc("minhas_unidades_permitidas");
+  const permitidas = ((data ?? []) as { unidade_id: number }[]).map(
+    (r) => r.unidade_id,
+  );
+  return permitidas.includes(idCookie) ? idCookie : unidadeHome;
+}
+
+async function carregarPerfil() {
   const supabase = clienteServidor();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { user: null, unidadeId: 1, erro: "Sem sessão ativa." };
+  if (!user) return { user: null, papel: null as string | null, unidadeId: 1 };
 
   const { data: perfil } = await supabase
     .from("perfis")
@@ -17,20 +40,42 @@ async function verificarOperador() {
     .maybeSingle();
 
   const p = perfil as { papel?: string; unidade_id?: number } | null;
+  const unidadeId = await resolverUnidadeEscrita(supabase, p?.unidade_id ?? 1);
 
-  // Fail-safe: só quem é explicitamente operador altera dados. Qualquer outro
-  // caso (visualizador, papel nulo, leitura bloqueada) fica sem permissão. O
-  // contrário — bloquear só o "visualizador" literal — liberaria por engano se
-  // a leitura do perfil falhasse.
-  if (p?.papel !== "operador") {
+  return { user, papel: p?.papel ?? null, unidadeId };
+}
+
+/**
+ * Cria e edita: lançador ou operador. Fail-safe — qualquer papel que não
+ * seja explicitamente um desses dois fica sem permissão (visualizador,
+ * papel nulo, leitura bloqueada). Bloquear só o "visualizador" literal
+ * liberaria acesso por engano se a leitura do perfil falhasse.
+ */
+async function verificarPodeGerenciar() {
+  const { user, papel, unidadeId } = await carregarPerfil();
+  if (!user) return { user: null, unidadeId, erro: "Sem sessão ativa." };
+  if (papel !== "lancador" && papel !== "operador") {
     return {
       user: null,
-      unidadeId: 1,
-      erro: "Você tem perfil de visualizador — sem permissão para alterar dados.",
+      unidadeId,
+      erro: "Seu perfil não tem permissão para alterar dados.",
     };
   }
+  return { user, unidadeId, erro: null };
+}
 
-  return { user, unidadeId: p.unidade_id ?? 1, erro: null };
+/** Excluir: só operador — lançador cria/edita, mas não exclui. */
+async function verificarPodeExcluir() {
+  const { user, papel, unidadeId } = await carregarPerfil();
+  if (!user) return { user: null, unidadeId, erro: "Sem sessão ativa." };
+  if (papel !== "operador") {
+    return {
+      user: null,
+      unidadeId,
+      erro: "Só operadores podem excluir lançamentos.",
+    };
+  }
+  return { user, unidadeId, erro: null };
 }
 
 export async function editarRemanejamento(
@@ -51,7 +96,7 @@ export async function editarRemanejamento(
     observacoes: string | null;
   },
 ): Promise<{ ok: boolean; erro?: string }> {
-  const { user, erro } = await verificarOperador();
+  const { user, erro } = await verificarPodeGerenciar();
   if (!user) return { ok: false, erro: erro ?? "Sem permissão." };
 
   const supabase = clienteServidor();
@@ -110,7 +155,7 @@ export async function encerrarRemanejamento(
   id: number,
   dataEncerramento: string,
 ): Promise<{ ok: boolean; erro?: string }> {
-  const { user, erro } = await verificarOperador();
+  const { user, erro } = await verificarPodeGerenciar();
   if (!user) return { ok: false, erro: erro ?? "Sem permissão." };
 
   const supabase = clienteServidor();
@@ -148,7 +193,7 @@ export async function salvarRemanejamento(dados: {
   profissional: string | null;
   observacoes: string | null;
 }): Promise<{ ok: boolean; erro?: string; colaboradorId?: number }> {
-  const { user, unidadeId, erro } = await verificarOperador();
+  const { user, unidadeId, erro } = await verificarPodeGerenciar();
   if (!user) return { ok: false, erro: erro ?? "Sem permissão." };
 
   const supabase = clienteServidor();
@@ -270,4 +315,55 @@ export async function salvarRemanejamento(dados: {
   revalidatePath(`/colaboradores/${colaboradorId}`);
 
   return { ok: true, colaboradorId };
+}
+
+/**
+ * Exclusão lógica — some das listas e indicadores, mas o registro continua
+ * no banco (pode ser restaurado) e o trigger de auditoria já grava a
+ * marcação como um UPDATE normal, com quem fez e quando.
+ */
+export async function excluirRemanejamento(
+  id: number,
+): Promise<{ ok: boolean; erro?: string }> {
+  const { user, erro } = await verificarPodeExcluir();
+  if (!user) return { ok: false, erro: erro ?? "Sem permissão." };
+
+  const supabase = clienteServidor();
+  const { error } = await supabase
+    .from("remanejamentos")
+    .update({
+      excluido: true,
+      excluido_em: new Date().toISOString(),
+      excluido_por: user.id,
+    })
+    .eq("id", id);
+
+  if (error) return { ok: false, erro: error.message };
+
+  revalidatePath("/");
+  revalidatePath("/remanejamentos");
+  revalidatePath("/colaboradores");
+
+  return { ok: true };
+}
+
+export async function restaurarRemanejamento(
+  id: number,
+): Promise<{ ok: boolean; erro?: string }> {
+  const { user, erro } = await verificarPodeExcluir();
+  if (!user) return { ok: false, erro: erro ?? "Sem permissão." };
+
+  const supabase = clienteServidor();
+  const { error } = await supabase
+    .from("remanejamentos")
+    .update({ excluido: false, excluido_em: null, excluido_por: null })
+    .eq("id", id);
+
+  if (error) return { ok: false, erro: error.message };
+
+  revalidatePath("/");
+  revalidatePath("/remanejamentos");
+  revalidatePath("/colaboradores");
+
+  return { ok: true };
 }

@@ -2,6 +2,8 @@ import Link from "next/link";
 import { Suspense } from "react";
 import Filtros from "@/components/Filtros";
 import { BotaoEncerrar } from "@/components/BotaoEncerrar";
+import { BotaoExcluir } from "@/components/BotaoExcluir";
+import { BotaoRestaurar } from "@/components/BotaoRestaurar";
 import { Cabecalho, Cartao, Selo, Vazio } from "@/components/ui";
 import {
   TIPO_ROTULO,
@@ -18,7 +20,12 @@ import {
   normalizar,
   situacaoDe,
 } from "@/lib/calculos";
-import { listarRemanejamentos, obterListas, perfilAtual } from "@/lib/dados";
+import {
+  listarRemanejamentos,
+  listarRemanejamentosExcluidos,
+  obterListas,
+  perfilAtual,
+} from "@/lib/dados";
 import type { Remanejamento, Situacao } from "@/lib/tipos";
 
 type Busca = Record<string, string | undefined>;
@@ -39,13 +46,63 @@ export default async function ListaRemanejamentos({
   searchParams: Busca;
 }) {
   const ref = hoje();
+  const verExcluidos = searchParams.visao === "excluidos";
+
   const [listas, todos, perfil] = await Promise.all([
     obterListas(),
-    listarRemanejamentos(),
+    verExcluidos ? listarRemanejamentosExcluidos() : listarRemanejamentos(),
     perfilAtual(),
   ]);
-  const podeEditar = perfil?.papel === "operador";
+  const podeEditar = perfil?.papel === "lancador" || perfil?.papel === "operador";
+  const podeExcluir = perfil?.papel === "operador";
   const anos = anosDisponiveis(todos);
+
+  if (verExcluidos) {
+    return (
+      <>
+        <Cabecalho
+          titulo="Excluídos"
+          descricao={`${todos.length} lançamento${todos.length !== 1 ? "s" : ""} excluído${todos.length !== 1 ? "s" : ""}.`}
+          acao={
+            <Link
+              href="/remanejamentos"
+              className="text-sm font-medium text-slate-500 hover:text-slate-900"
+            >
+              ← Voltar aos casos
+            </Link>
+          }
+        />
+        <Cartao>
+          {todos.length === 0 ? (
+            <Vazio>Nenhum lançamento excluído.</Vazio>
+          ) : (
+            <ul className="divide-y divide-slate-100">
+              {todos.map((r) => (
+                <li
+                  key={r.id}
+                  className="flex flex-wrap items-center justify-between gap-3 px-5 py-3"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-slate-900">
+                      {r.nome}
+                    </p>
+                    <p className="text-xs text-slate-400">
+                      {[r.setor, r.turno, descreverSegmento(r)]
+                        .filter(Boolean)
+                        .join(" · ")}
+                      {r.excluidoEm &&
+                        ` · excluído em ${formatarDataObj(new Date(r.excluidoEm))}`}
+                    </p>
+                  </div>
+                  {podeExcluir && <BotaoRestaurar id={r.id} />}
+                </li>
+              ))}
+            </ul>
+          )}
+        </Cartao>
+      </>
+    );
+  }
 
   const filtrados = todos.filter((r) => {
     if (searchParams.setor && r.setor !== searchParams.setor) return false;
@@ -82,6 +139,16 @@ export default async function ListaRemanejamentos({
       <Cabecalho
         titulo="Remanejamentos"
         descricao={`${ordenados.length} de ${todos.length} registros.`}
+        acao={
+          podeExcluir ? (
+            <Link
+              href="/remanejamentos?visao=excluidos"
+              className="text-sm font-medium text-slate-500 hover:text-slate-900"
+            >
+              Ver excluídos
+            </Link>
+          ) : undefined
+        }
       />
 
       <Suspense fallback={<div className="mb-5 h-9" />}>
@@ -141,7 +208,13 @@ export default async function ListaRemanejamentos({
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {ordenados.map((r) => (
-                  <Linha key={r.id} r={r} ref_={ref} podeEditar={podeEditar} />
+                  <Linha
+                    key={r.id}
+                    r={r}
+                    ref_={ref}
+                    podeEditar={podeEditar}
+                    podeExcluir={podeExcluir}
+                  />
                 ))}
               </tbody>
             </table>
@@ -156,10 +229,12 @@ function Linha({
   r,
   ref_,
   podeEditar,
+  podeExcluir,
 }: {
   r: Remanejamento;
   ref_: Date;
   podeEditar: boolean;
+  podeExcluir: boolean;
 }) {
   const fim = previsaoFim(r);
   const dias = diasAteFim(r, ref_);
@@ -216,6 +291,7 @@ function Linha({
               Editar
             </Link>
             <BotaoEncerrar id={r.id} />
+            {podeExcluir && <BotaoExcluir id={r.id} />}
           </div>
         )}
       </td>

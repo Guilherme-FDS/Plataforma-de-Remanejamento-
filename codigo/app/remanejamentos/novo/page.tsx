@@ -16,8 +16,10 @@ export default async function NovoLancamento() {
     perfilAtual(),
   ]);
 
-  // Visualizador não lança — bloqueia acesso direto pela URL.
-  if (perfil?.papel !== "operador") redirect("/remanejamentos");
+  // Visualizador não lança — bloqueia acesso direto pela URL. Lançador e
+  // operador podem.
+  if (perfil?.papel !== "lancador" && perfil?.papel !== "operador")
+    redirect("/remanejamentos");
 
   return (
     <div className="mx-auto max-w-3xl">

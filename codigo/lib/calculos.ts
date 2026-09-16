@@ -94,6 +94,31 @@ export function estaAberto(r: Remanejamento, ref: Date = hoje()): boolean {
   return SITUACOES_ABERTAS.includes(situacaoDe(r, ref));
 }
 
+export type SituacaoRelatorio = "todos" | "abertos" | "encerrados";
+
+/**
+ * Filtro do relatório (setores + situação). Compartilhado entre a tela
+ * interativa (client) e a página de impressão (server) — as duas precisam
+ * aplicar exatamente o mesmo filtro para o PDF bater com o que a pessoa via
+ * na tela antes de mandar imprimir.
+ */
+export function filtrarRelatorio(
+  todos: Remanejamento[],
+  opcoes: { setores?: string[]; situacao?: SituacaoRelatorio },
+  ref: Date = hoje(),
+): Remanejamento[] {
+  const setoresSel = opcoes.setores ?? [];
+  const situacaoSel = opcoes.situacao ?? "todos";
+  return todos.filter((r) => {
+    if (setoresSel.length > 0 && !setoresSel.includes(r.setor ?? ""))
+      return false;
+    if (situacaoSel === "abertos") return estaAberto(r, ref);
+    if (situacaoSel === "encerrados")
+      return !estaAberto(r, ref) && !!r.dataEncerramento;
+    return true;
+  });
+}
+
 /** Dias até a previsão de término. Negativo = já venceu. */
 export function diasAteFim(r: Remanejamento, ref: Date = hoje()): number | null {
   const fim = previsaoFim(r);

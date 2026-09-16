@@ -7,12 +7,15 @@
 import { cache } from "react";
 import { clienteServidor } from "./supabase-servidor";
 import type {
+  AlcanceUnidades,
   Colaborador,
   Listas,
+  Papel,
   Pendencia,
   Remanejamento,
   Segmento,
   TipoRestricao,
+  Unidade,
 } from "./tipos";
 
 const TIPOS: { id: TipoRestricao; rotulo: string }[] = [
@@ -48,6 +51,8 @@ interface LinhaView {
   origem: string;
   linha_origem: number | null;
   possivel_duplicata_de: number | null;
+  excluido: boolean;
+  excluido_em: string | null;
 }
 
 function converter(l: LinhaView): Remanejamento {
@@ -75,6 +80,8 @@ function converter(l: LinhaView): Remanejamento {
     origem: l.origem,
     linhaOrigem: l.linha_origem,
     possivelDuplicataDe: l.possivel_duplicata_de,
+    excluido: l.excluido,
+    excluidoEm: l.excluido_em,
   };
 }
 
@@ -84,14 +91,32 @@ function converter(l: LinhaView): Remanejamento {
  * uma vez.
  */
 export const listarRemanejamentos = cache(
+  async (incluirExcluidos = false): Promise<Remanejamento[]> => {
+    const supabase = clienteServidor();
+    let query = supabase
+      .from("vw_remanejamentos")
+      .select("*")
+      .order("data_inicio", { ascending: false });
+    if (!incluirExcluidos) query = query.eq("excluido", false);
+
+    const { data, error } = await query;
+
+    if (error) throw new Error(`Falha ao ler remanejamentos: ${error.message}`);
+    return (data as LinhaView[]).map(converter);
+  },
+);
+
+/** Só os excluídos — usado na tela de restaurar. */
+export const listarRemanejamentosExcluidos = cache(
   async (): Promise<Remanejamento[]> => {
     const supabase = clienteServidor();
     const { data, error } = await supabase
       .from("vw_remanejamentos")
       .select("*")
-      .order("data_inicio", { ascending: false });
+      .eq("excluido", true)
+      .order("excluido_em", { ascending: false });
 
-    if (error) throw new Error(`Falha ao ler remanejamentos: ${error.message}`);
+    if (error) throw new Error(`Falha ao ler excluídos: ${error.message}`);
     return (data as LinhaView[]).map(converter);
   },
 );
@@ -387,14 +412,77 @@ export async function perfilAtual() {
 
     const { data } = await supabase
       .from("perfis")
-      .select("nome, funcao, admin, ativo, papel")
+      .select("nome, funcao, admin, ativo, papel, alcance_unidades, unidade_id")
       .eq("id", user.id)
       .maybeSingle();
 
-    return data ? { ...data, email: user.email ?? "" } : null;
+    return data
+      ? {
+          ...(data as {
+            nome: string;
+            funcao: string;
+            admin: boolean;
+            ativo: boolean;
+            papel: Papel;
+            alcance_unidades: AlcanceUnidades;
+            unidade_id: number | null;
+          }),
+          email: user.email ?? "",
+        }
+      : null;
   } catch {
     // Sem perfil, a navegação aparece sem o nome do usuário. As páginas de
     // dados continuam falhando alto, como devem.
     return null;
   }
+}
+
+/** Todas as unidades cadastradas — leitura livre para toda a equipe ativa. */
+export const listarTodasUnidades = cache(async (): Promise<Unidade[]> => {
+  const supabase = clienteServidor();
+  const { data, error } = await supabase
+    .from("unidades")
+    .select("id, nome, ativo")
+    .order("nome");
+  if (error) throw new Error(`Falha ao ler unidades: ${error.message}`);
+  return data ?? [];
+});
+
+/**
+ * Unidades que o usuário logado pode ver — considera alcance_unidades
+ * (própria / todas / específicas liberadas). Usado no seletor de unidade
+ * ativa e para validar trocas.
+ *
+ * Nunca lança, pelo mesmo motivo de `perfilAtual()`: é chamado pelo layout
+ * raiz, que envolve TODAS as páginas. Um erro aqui (banco fora do ar,
+ * migration ainda não aplicada) derrubaria o app inteiro em vez de só
+ * esconder o seletor de unidade.
+ */
+export const listarUnidadesPermitidas = cache(async (): Promise<Unidade[]> => {
+  try {
+    const supabase = clienteServidor();
+    const { data, error } = await supabase.rpc(
+      "minhas_unidades_permitidas_detalhe",
+    );
+    if (error) return [];
+    return ((data ?? []) as { id: number; nome: string }[]).map((u) => ({
+      ...u,
+      ativo: true,
+    }));
+  } catch {
+    return [];
+  }
+});
+
+/** Unidades extras liberadas para um perfil específico (alcance = 'especificas'). */
+export async function listarUnidadesExtrasDe(
+  perfilId: string,
+): Promise<number[]> {
+  const supabase = clienteServidor();
+  const { data, error } = await supabase
+    .from("perfil_unidades_extra")
+    .select("unidade_id")
+    .eq("perfil_id", perfilId);
+  if (error) throw new Error(`Falha ao ler unidades extras: ${error.message}`);
+  return (data ?? []).map((r) => r.unidade_id as number);
 }

@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useTransition } from "react";
+import { definirUnidadeAtiva } from "@/app/actions/unidades";
 import Logo from "./Logo";
 
 const ITENS = [
@@ -31,18 +33,26 @@ function iniciais(nome: string) {
 
 export default function Nav({
   usuario,
-  soLeitura = false,
+  podeGerenciar = false,
+  unidades = [],
+  unidadeAtivaId,
 }: {
   usuario: string | null;
-  soLeitura?: boolean;
+  /** lançador ou operador — visualizador fica com isto em false. */
+  podeGerenciar?: boolean;
+  /** Unidades que o usuário pode ver. Só aparece seletor se houver mais de uma. */
+  unidades?: { id: number; nome: string }[];
+  unidadeAtivaId?: number;
 }) {
   const caminho = usePathname();
 
-  // A tela de login não tem navegação.
-  if (caminho.startsWith("/login")) return null;
+  // Login e a página de impressão de relatório não têm navegação.
+  if (caminho.startsWith("/login") || caminho.startsWith("/relatorios/imprimir"))
+    return null;
 
   // Visualizador não gerencia dados: sem Config nem lançamento.
-  const itens = soLeitura ? ITENS.filter((i) => i.href !== "/admin") : ITENS;
+  const itens = podeGerenciar ? ITENS : ITENS.filter((i) => i.href !== "/admin");
+  const unidadeAtiva = unidades.find((u) => u.id === unidadeAtivaId);
 
   return (
     <>
@@ -53,9 +63,17 @@ export default function Nav({
             <Logo className="h-6 w-auto text-gtf-700 sm:h-7" />
             <span className="hidden text-sm font-semibold tracking-tight text-slate-900 sm:inline">
               Remanejamento
-              <span className="ml-1.5 font-normal text-slate-400">Maringá</span>
+              {unidadeAtiva && (
+                <span className="ml-1.5 font-normal text-slate-400">
+                  {unidadeAtiva.nome}
+                </span>
+              )}
             </span>
           </Link>
+
+          {unidades.length > 1 && (
+            <SeletorUnidade unidades={unidades} ativaId={unidadeAtivaId} />
+          )}
 
           {/* Navegação no topo só a partir de sm; no celular vai embaixo. */}
           <nav className="hidden flex-1 items-center gap-1 sm:flex">
@@ -75,7 +93,7 @@ export default function Nav({
           </nav>
 
           <div className="ml-auto flex items-center gap-2 sm:ml-0 sm:gap-3">
-            {!soLeitura && (
+            {podeGerenciar && (
               <Link
                 href="/remanejamentos/novo"
                 className="rounded-lg bg-gtf-700 px-3 py-2 text-sm font-medium text-white transition hover:bg-gtf-800 active:bg-gtf-900"
@@ -142,6 +160,40 @@ export default function Nav({
       {/* Espaço para a barra inferior não cobrir o fim do conteúdo. */}
       <div className="h-16 sm:hidden" aria-hidden />
     </>
+  );
+}
+
+/** Seletor de unidade ativa — só aparece pra quem enxerga mais de uma. */
+function SeletorUnidade({
+  unidades,
+  ativaId,
+}: {
+  unidades: { id: number; nome: string }[];
+  ativaId?: number;
+}) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+
+  return (
+    <select
+      value={ativaId ?? unidades[0]?.id}
+      disabled={pending}
+      onChange={(e) => {
+        const id = Number(e.target.value);
+        startTransition(async () => {
+          await definirUnidadeAtiva(id);
+          router.refresh();
+        });
+      }}
+      className="hidden h-8 shrink-0 rounded-md border border-slate-200 bg-slate-50 px-2 text-xs font-medium text-slate-600 sm:block"
+      title="Unidade ativa"
+    >
+      {unidades.map((u) => (
+        <option key={u.id} value={u.id}>
+          {u.nome}
+        </option>
+      ))}
+    </select>
   );
 }
 

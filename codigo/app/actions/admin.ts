@@ -2,7 +2,30 @@
 
 import { revalidatePath } from "next/cache";
 import { clienteServidor } from "@/lib/supabase-servidor";
+import { unidadeAtivaCookie } from "@/lib/unidade-ativa";
 
+type SupabaseCliente = ReturnType<typeof clienteServidor>;
+
+/** Ver nota completa em actions/remanejamentos.ts — mesma lógica. */
+async function resolverUnidadeEscrita(
+  supabase: SupabaseCliente,
+  unidadeHome: number,
+): Promise<number> {
+  const idCookie = unidadeAtivaCookie();
+  if (!idCookie || idCookie === unidadeHome) return unidadeHome;
+
+  const { data } = await supabase.rpc("minhas_unidades_permitidas");
+  const permitidas = ((data ?? []) as { unidade_id: number }[]).map(
+    (r) => r.unidade_id,
+  );
+  return permitidas.includes(idCookie) ? idCookie : unidadeHome;
+}
+
+/**
+ * As listas de configuração (setores, turnos, segmentos, etc.) ficam
+ * restritas a operador — mais estrutural que um lançamento avulso.
+ * Fail-safe: só libera para o papel explicitamente igual a "operador".
+ */
 async function verificarOperador() {
   const supabase = clienteServidor();
   const {
@@ -18,12 +41,12 @@ async function verificarOperador() {
 
   const p = perfil as { papel?: string; unidade_id?: number } | null;
 
-  // Fail-safe: só operador altera. Ver nota em actions/remanejamentos.ts.
   if (p?.papel !== "operador") {
     return { user: null, unidadeId: 1, erro: "Sem permissão." };
   }
 
-  return { user, unidadeId: p.unidade_id ?? 1, erro: null };
+  const unidadeId = await resolverUnidadeEscrita(supabase, p.unidade_id ?? 1);
+  return { user, unidadeId, erro: null };
 }
 
 type Resultado = { ok: boolean; erro?: string };

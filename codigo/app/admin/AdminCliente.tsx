@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import type { ItemLista, ListasAdmin, SegmentoAdmin } from "@/lib/dados";
 import type { UsuarioAdmin } from "@/app/actions/usuarios";
+import type { Unidade } from "@/lib/tipos";
 import {
   criarSetor, editarSetor, toggleSetor,
   criarTurno, editarTurno,
@@ -11,12 +12,16 @@ import {
   criarRegiao, editarRegiao,
   criarSegmento, editarSegmento, toggleSegmento,
 } from "@/app/actions/admin";
+import { criarUnidade, editarUnidade, toggleUnidade } from "@/app/actions/unidades";
 import UsuariosCliente from "./UsuariosCliente";
 
-type Aba = "setores" | "turnos" | "supervisores" | "profissionais" | "segmentos" | "regioes" | "usuarios";
+type Aba =
+  | "setores" | "turnos" | "supervisores" | "profissionais"
+  | "segmentos" | "regioes" | "usuarios" | "unidades";
 
 const ABAS: { id: Aba; rotulo: string }[] = [
   { id: "usuarios", rotulo: "Usuários" },
+  { id: "unidades", rotulo: "Unidades" },
   { id: "setores", rotulo: "Setores" },
   { id: "turnos", rotulo: "Turnos" },
   { id: "supervisores", rotulo: "Supervisores" },
@@ -28,9 +33,11 @@ const ABAS: { id: Aba; rotulo: string }[] = [
 export default function AdminCliente({
   listas,
   usuarios,
+  unidades,
 }: {
   listas: ListasAdmin;
   usuarios: UsuarioAdmin[];
+  unidades: Unidade[];
 }) {
   const [aba, setAba] = useState<Aba>("usuarios");
 
@@ -53,7 +60,20 @@ export default function AdminCliente({
         ))}
       </div>
 
-      {aba === "usuarios" && <UsuariosCliente usuarios={usuarios} />}
+      {aba === "usuarios" && (
+        <UsuariosCliente usuarios={usuarios} unidades={unidades} />
+      )}
+
+      {aba === "unidades" && (
+        <ListaSimples
+          titulo="Unidades"
+          itens={unidades}
+          temAtivo
+          onCriar={criarUnidade}
+          onEditar={editarUnidade}
+          onToggle={toggleUnidade}
+        />
+      )}
 
       {aba === "setores" && (
         <ListaSimples

@@ -71,6 +71,19 @@ export interface Remanejamento {
   linhaOrigem: number | null;
   /** Preenchido quando a planilha repetiu o mesmo caso em duas linhas. */
   possivelDuplicataDe: number | null;
+
+  /** Exclusão lógica: sai das listas e indicadores, mas fica no banco. */
+  excluido: boolean;
+  excluidoEm: string | null;
+}
+
+export type Papel = "visualizador" | "lancador" | "operador";
+export type AlcanceUnidades = "propria" | "todas" | "especificas";
+
+export interface Unidade {
+  id: number;
+  nome: string;
+  ativo: boolean;
 }
 
 export interface Pendencia {
