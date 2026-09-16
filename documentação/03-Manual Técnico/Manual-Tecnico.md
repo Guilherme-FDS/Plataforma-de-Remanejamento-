@@ -134,14 +134,32 @@ unidade no Nav (`components/Nav.tsx`, `SeletorUnidade`). A escolha vai
 para um cookie (`unidade_ativa`, definido em `lib/unidade-ativa.ts`) via
 a Server Action `definirUnidadeAtiva` (`app/actions/unidades.ts`).
 
-Ao **escrever** (lançar caso, criar item de lista), `resolverUnidadeEscrita()`
-— duplicada de propósito em `app/actions/remanejamentos.ts` e
-`app/actions/admin.ts`, mesma lógica nos dois — lê o cookie mas **nunca
-confia nele cegamente**: sempre revalida contra
-`minhas_unidades_permitidas()` no banco antes de gravar. Se o cookie
-apontar para uma unidade que o usuário não pode mais ver (ex: acesso
-revogado depois do cookie ser setado), a escrita cai de volta para a
-unidade de casa.
+O cookie aceita o id de uma unidade ou o valor `todas` (consolidado).
+Ele governa **duas coisas**, e é importante manter as duas em dia:
+
+**Leitura** — `unidadeAtivaLeitura()` (`lib/dados.ts`) resolve a unidade em
+contexto, e toda consulta de dado aplica `unidade_id = <ativa>`: casos,
+colaboradores, ficha, histórico e as listas de configuração. No modo
+`todas` devolve `null` e nenhuma consulta filtra (aí a RLS sozinha decide).
+**Sem esse filtro a RLS não basta**: para quem tem alcance `todas`, ela
+libera todas as unidades somadas, e trocar de unidade no seletor não muda
+nada na tela — foi exatamente o bug de 2026-09-15.
+
+*Ficam de fora do filtro de propósito:* `contraindicacoes_modelo` (é texto
+por segmento do corpo, não tem dono de unidade) e `importacao_pendencias`
+(são as linhas da planilha original, e a tabela nem tem `unidade_id`).
+
+**Escrita** — `resolverUnidadeEscrita()`, duplicada de propósito em
+`app/actions/remanejamentos.ts` e `app/actions/admin.ts`, lê o cookie mas
+**nunca confia nele cegamente**: sempre revalida contra
+`minhas_unidades_permitidas()` no banco antes de gravar. Cookie inválido,
+acesso revogado ou modo `todas` caem para a unidade de casa.
+
+Além disso, **toda busca de FK por nome precisa filtrar por unidade**:
+setor, turno, segmento, supervisor e profissional são únicos por
+`(nome, unidade_id)`, não por nome. Sem o filtro, um nome repetido em duas
+unidades faz o `maybeSingle()` encontrar duas linhas e o lançamento falhar.
+O mesmo vale para achar colaborador por matrícula.
 
 ### Auditoria
 

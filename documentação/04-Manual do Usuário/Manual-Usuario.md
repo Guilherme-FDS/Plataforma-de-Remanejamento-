@@ -30,8 +30,26 @@ ela pode *fazer* (papel) e o que ela pode *ver* (alcance de unidades).
   administrador liberar individualmente.
 
 Quem enxerga mais de uma unidade vê um **seletor de unidade** no menu do
-topo. A unidade escolhida ali define o que aparece nas telas e em qual
-unidade um novo lançamento é gravado.
+topo. Ele define o **contexto inteiro**: tudo que as telas mostram (painel,
+casos, indicadores, relatórios, listas de setores e turnos) passa a ser só
+daquela unidade, e um novo lançamento é gravado nela.
+
+No fim da lista do seletor há a opção **"Todas as unidades"**, para quando
+você quiser o consolidado em vez de uma unidade por vez. Nesse modo, um
+lançamento novo é gravado na sua unidade de origem, já que não existe
+unidade de destino óbvia.
+
+Uma unidade recém-criada aparece **vazia** — sem setores, turnos,
+supervisores nem segmentos. É preciso cadastrar essas listas em
+Configurações, com o seletor já apontando para a unidade nova, porque é
+ele que decide onde elas são criadas.
+
+### Ver seus próprios dados
+
+Clique no **seu nome** (ou nas suas iniciais) no canto superior direito.
+Abre uma janela com nome, e-mail, função, papel, se você é administrador,
+sua unidade e seu alcance de unidades. É só consulta — para mudar qualquer
+coisa aí, é preciso falar com um administrador.
 
 ### Administrador
 

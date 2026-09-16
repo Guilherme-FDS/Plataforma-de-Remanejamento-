@@ -61,27 +61,40 @@ Detalhes completos em [[Manual-Tecnico]].
       (visualizador/lançador/operador) × alcance de unidades
       (própria/todas/específicas), configurável por usuário em
       Configurações — [[2026-09-15]]
-- [x] **Unidades**: aba para criar/gerenciar (nasce vazia) e seletor de
-      unidade ativa no menu para quem enxerga mais de uma — [[2026-09-15]]
+- [x] **Unidades**: aba para criar/gerenciar (nasce vazia), seletor de
+      unidade ativa no menu (com opção "Todas as unidades") e **todo o
+      conteúdo das telas filtrado pela unidade em contexto** — [[2026-09-15]]
+- [x] **Modal com os próprios dados** ao clicar no nome no topo, para
+      qualquer papel — [[2026-09-15]]
+- [x] **Pendências viraram tela de ação**: seção automática com as quatro
+      regras de dado faltando, link para a ficha, botão "Corrigir", e
+      "Marcar resolvida" nas pendências antigas da importação —
+      [[2026-09-15]]
 
-> Implementado no código em 2026-09-15, migration `0008` ainda não rodada
-> no banco de produção — ver [[2026-09-15]] para o SQL e o passo a passo.
+> Migrations `0008`, `0009` e `0010` já aplicadas em produção.
 
 ## Pendente / em aberto
 
 > Atualizado manualmente. Ver o arquivo do dia em que o item foi pedido
 > para o contexto completo da conversa.
 
-- [ ] Rodar a migration `0008_hierarquia_e_exclusao.sql` em produção e
-      confirmar, para o código ser enviado (`git push`) — [[2026-09-15]]
 - [ ] **Limpeza do banco de dados** para demonstração ao gestor do
       departamento (apagar dados reais de colaboradores/remanejamentos,
       manter listas de configuração como setores/turnos/segmentos) —
-      **aguardando confirmação do escopo exato antes de fazer qualquer
-      coisa no banco.** — [[2026-09-15]]
-- [ ] Decidir o futuro da tela de **Pendências**: hoje é só um retrato
-      estático da importação original (somente leitura, sem clicar para
-      abrir o colaborador, sem regra automática para lançamentos novos).
-      Perguntas em aberto: vira uma tela de ação de verdade? Passa a gerar
-      pendência automaticamente em lançamentos incompletos? —
+      **em stand by por decisão do usuário; nada foi tocado no banco.** —
       [[2026-09-15]]
+- [ ] **Rodada de testes completa** do usuário sobre tudo que foi entregue
+      em 2026-09-15 — [[2026-09-15]]
+
+### Configurações do Supabase (painel, não é código)
+
+- [ ] Desligar **"Allow new users to sign up"** — está ligado, mas o
+      sistema não tem auto-cadastro: todo acesso nasce de convite do
+      administrador. Não vaza dado (sem linha em `perfis`, a RLS bloqueia
+      tudo), mas é porta aberta sem motivo.
+- [ ] **Senha mínima de 6 → 8** e **exigir letras + números**. Hoje a tela
+      de definir senha cobra 8 caracteres, mas isso é validação só no
+      navegador — o Supabase aceita 6. Os dois precisam concordar.
+- [ ] ~~Proteção contra senha vazada (HaveIBeenPwned)~~ — **indisponível**:
+      exige plano Pro, e o projeto está no Free. Não vale assinar só por
+      isso se as duas medidas acima forem aplicadas.
