@@ -35,14 +35,15 @@ export default function Nav({
   usuario,
   podeGerenciar = false,
   unidades = [],
-  unidadeAtivaId,
+  unidadeAtiva,
 }: {
   usuario: string | null;
   /** lançador ou operador — visualizador fica com isto em false. */
   podeGerenciar?: boolean;
   /** Unidades que o usuário pode ver. Só aparece seletor se houver mais de uma. */
   unidades?: { id: number; nome: string }[];
-  unidadeAtivaId?: number;
+  /** Id da unidade em contexto, ou "todas" para o consolidado. */
+  unidadeAtiva?: number | "todas";
 }) {
   const caminho = usePathname();
 
@@ -52,7 +53,10 @@ export default function Nav({
 
   // Visualizador não gerencia dados: sem Config nem lançamento.
   const itens = podeGerenciar ? ITENS : ITENS.filter((i) => i.href !== "/admin");
-  const unidadeAtiva = unidades.find((u) => u.id === unidadeAtivaId);
+  const rotuloUnidade =
+    unidadeAtiva === "todas"
+      ? "Todas as unidades"
+      : unidades.find((u) => u.id === unidadeAtiva)?.nome;
 
   return (
     <>
@@ -63,16 +67,16 @@ export default function Nav({
             <Logo className="h-6 w-auto text-gtf-700 sm:h-7" />
             <span className="hidden text-sm font-semibold tracking-tight text-slate-900 sm:inline">
               Remanejamento
-              {unidadeAtiva && (
+              {rotuloUnidade && (
                 <span className="ml-1.5 font-normal text-slate-400">
-                  {unidadeAtiva.nome}
+                  {rotuloUnidade}
                 </span>
               )}
             </span>
           </Link>
 
           {unidades.length > 1 && (
-            <SeletorUnidade unidades={unidades} ativaId={unidadeAtivaId} />
+            <SeletorUnidade unidades={unidades} ativa={unidadeAtiva} />
           )}
 
           {/* Navegação no topo só a partir de sm; no celular vai embaixo. */}
@@ -163,29 +167,34 @@ export default function Nav({
   );
 }
 
-/** Seletor de unidade ativa — só aparece pra quem enxerga mais de uma. */
+/**
+ * Seletor de unidade ativa — só aparece pra quem enxerga mais de uma.
+ * Define o contexto inteiro: o que as telas mostram e em que unidade os
+ * lançamentos são gravados.
+ */
 function SeletorUnidade({
   unidades,
-  ativaId,
+  ativa,
 }: {
   unidades: { id: number; nome: string }[];
-  ativaId?: number;
+  ativa?: number | "todas";
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
   return (
     <select
-      value={ativaId ?? unidades[0]?.id}
+      value={ativa ?? unidades[0]?.id}
       disabled={pending}
       onChange={(e) => {
-        const id = Number(e.target.value);
+        const valor = e.target.value;
+        const escolha = valor === "todas" ? "todas" : Number(valor);
         startTransition(async () => {
-          await definirUnidadeAtiva(id);
+          await definirUnidadeAtiva(escolha);
           router.refresh();
         });
       }}
-      className="hidden h-8 shrink-0 rounded-md border border-slate-200 bg-slate-50 px-2 text-xs font-medium text-slate-600 sm:block"
+      className="h-8 shrink-0 rounded-md border border-slate-200 bg-slate-50 px-2 text-xs font-medium text-slate-600"
       title="Unidade ativa"
     >
       {unidades.map((u) => (
@@ -193,6 +202,7 @@ function SeletorUnidade({
           {u.nome}
         </option>
       ))}
+      <option value="todas">Todas as unidades</option>
     </select>
   );
 }

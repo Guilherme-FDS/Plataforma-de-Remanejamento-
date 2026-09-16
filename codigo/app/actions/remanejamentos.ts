@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { clienteServidor } from "@/lib/supabase-servidor";
-import { unidadeAtivaCookie } from "@/lib/unidade-ativa";
+import { TODAS_UNIDADES, unidadeAtivaCookie } from "@/lib/unidade-ativa";
 
 type SupabaseCliente = ReturnType<typeof clienteServidor>;
 
@@ -11,13 +11,21 @@ type SupabaseCliente = ReturnType<typeof clienteServidor>;
  * seletor do Nav, se o usuário realmente tiver acesso a ela — senão a
  * unidade de casa. Nunca confia cegamente no cookie: sempre revalida contra
  * `minhas_unidades_permitidas()` no banco antes de usar para escrita.
+ *
+ * No modo "todas as unidades" (consolidado) não há unidade de destino
+ * óbvia, então a escrita cai para a unidade de casa.
  */
 async function resolverUnidadeEscrita(
   supabase: SupabaseCliente,
   unidadeHome: number,
 ): Promise<number> {
   const idCookie = unidadeAtivaCookie();
-  if (!idCookie || idCookie === unidadeHome) return unidadeHome;
+  if (
+    !idCookie ||
+    idCookie === TODAS_UNIDADES ||
+    idCookie === unidadeHome
+  )
+    return unidadeHome;
 
   const { data } = await supabase.rpc("minhas_unidades_permitidas");
   const permitidas = ((data ?? []) as { unidade_id: number }[]).map(
@@ -96,15 +104,20 @@ export async function editarRemanejamento(
     observacoes: string | null;
   },
 ): Promise<{ ok: boolean; erro?: string }> {
-  const { user, erro } = await verificarPodeGerenciar();
+  const { user, unidadeId, erro } = await verificarPodeGerenciar();
   if (!user) return { ok: false, erro: erro ?? "Sem permissão." };
 
   const supabase = clienteServidor();
 
+  // Filtrar por unidade não é opcional: duas unidades podem ter setores de
+  // mesmo nome, e sem isso o maybeSingle() encontraria duas linhas e falharia.
   const [setorRes, turnoRes, segmentoRes] = await Promise.all([
-    supabase.from("setores").select("id").eq("nome", dados.setor).maybeSingle(),
-    supabase.from("turnos").select("id").eq("nome", dados.turno).maybeSingle(),
-    supabase.from("segmentos").select("id").eq("nome", dados.segmento).maybeSingle(),
+    supabase.from("setores").select("id")
+      .eq("nome", dados.setor).eq("unidade_id", unidadeId).maybeSingle(),
+    supabase.from("turnos").select("id")
+      .eq("nome", dados.turno).eq("unidade_id", unidadeId).maybeSingle(),
+    supabase.from("segmentos").select("id")
+      .eq("nome", dados.segmento).eq("unidade_id", unidadeId).maybeSingle(),
   ]);
 
   if (!setorRes.data) return { ok: false, erro: `Setor "${dados.setor}" não encontrado.` };
@@ -115,11 +128,13 @@ export async function editarRemanejamento(
   let profissionalId: number | null = null;
 
   if (dados.supervisor) {
-    const { data } = await supabase.from("supervisores").select("id").eq("nome", dados.supervisor).maybeSingle();
+    const { data } = await supabase.from("supervisores").select("id")
+      .eq("nome", dados.supervisor).eq("unidade_id", unidadeId).maybeSingle();
     supervisorId = data?.id ?? null;
   }
   if (dados.profissional) {
-    const { data } = await supabase.from("profissionais").select("id").eq("nome", dados.profissional).maybeSingle();
+    const { data } = await supabase.from("profissionais").select("id")
+      .eq("nome", dados.profissional).eq("unidade_id", unidadeId).maybeSingle();
     profissionalId = data?.id ?? null;
   }
 
@@ -198,15 +213,15 @@ export async function salvarRemanejamento(dados: {
 
   const supabase = clienteServidor();
 
-  // Resolve IDs de domínio em paralelo
+  // Resolve IDs de domínio em paralelo, sempre dentro da unidade de destino:
+  // nomes podem se repetir entre unidades.
   const [setorRes, turnoRes, segmentoRes] = await Promise.all([
-    supabase.from("setores").select("id").eq("nome", dados.setor).maybeSingle(),
-    supabase.from("turnos").select("id").eq("nome", dados.turno).maybeSingle(),
-    supabase
-      .from("segmentos")
-      .select("id")
-      .eq("nome", dados.segmento)
-      .maybeSingle(),
+    supabase.from("setores").select("id")
+      .eq("nome", dados.setor).eq("unidade_id", unidadeId).maybeSingle(),
+    supabase.from("turnos").select("id")
+      .eq("nome", dados.turno).eq("unidade_id", unidadeId).maybeSingle(),
+    supabase.from("segmentos").select("id")
+      .eq("nome", dados.segmento).eq("unidade_id", unidadeId).maybeSingle(),
   ]);
 
   if (!setorRes.data) return { ok: false, erro: `Setor "${dados.setor}" não encontrado.` };
@@ -221,6 +236,7 @@ export async function salvarRemanejamento(dados: {
       .from("supervisores")
       .select("id")
       .eq("nome", dados.supervisor)
+      .eq("unidade_id", unidadeId)
       .maybeSingle();
     supervisorId = data?.id ?? null;
   }
@@ -230,6 +246,7 @@ export async function salvarRemanejamento(dados: {
       .from("profissionais")
       .select("id")
       .eq("nome", dados.profissional)
+      .eq("unidade_id", unidadeId)
       .maybeSingle();
     profissionalId = data?.id ?? null;
   }
@@ -238,10 +255,13 @@ export async function salvarRemanejamento(dados: {
   let colaboradorId: number;
 
   if (dados.matricula !== null) {
+    // Mesma matrícula pode existir em unidades diferentes — a busca precisa
+    // ficar dentro da unidade de destino.
     const { data: existente } = await supabase
       .from("colaboradores")
       .select("id")
       .eq("matricula", dados.matricula)
+      .eq("unidade_id", unidadeId)
       .maybeSingle();
 
     if (existente) {

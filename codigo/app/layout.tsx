@@ -1,8 +1,12 @@
 import type { Metadata, Viewport } from "next";
 import Nav from "@/components/Nav";
 import ServiceWorker from "@/components/ServiceWorker";
-import { listarUnidadesPermitidas, perfilAtual } from "@/lib/dados";
-import { unidadeAtivaCookie } from "@/lib/unidade-ativa";
+import {
+  listarUnidadesPermitidas,
+  perfilAtual,
+  unidadeAtivaLeitura,
+} from "@/lib/dados";
+import { TODAS_UNIDADES, unidadeAtivaCookie } from "@/lib/unidade-ativa";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -53,11 +57,10 @@ export default async function RootLayout({
   // Sem sessão, não há por que consultar unidades — evita uma chamada extra
   // na tela de login.
   const unidades = perfil ? await listarUnidadesPermitidas() : [];
-  const idCookie = unidadeAtivaCookie();
-  const unidadeAtivaId =
-    unidades.find((u) => u.id === idCookie)?.id ??
-    unidades.find((u) => u.id === perfil?.unidade_id)?.id ??
-    unidades[0]?.id;
+  const unidadeAtiva =
+    unidadeAtivaCookie() === TODAS_UNIDADES
+      ? TODAS_UNIDADES
+      : ((await unidadeAtivaLeitura()) ?? undefined);
 
   return (
     <html lang="pt-BR">
@@ -67,7 +70,7 @@ export default async function RootLayout({
           usuario={perfil?.nome ?? null}
           podeGerenciar={perfil?.papel === "lancador" || perfil?.papel === "operador"}
           unidades={unidades}
-          unidadeAtivaId={unidadeAtivaId}
+          unidadeAtiva={unidadeAtiva}
         />
         <main className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
           {children}

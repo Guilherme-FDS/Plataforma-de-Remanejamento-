@@ -6,6 +6,7 @@
  */
 import { cache } from "react";
 import { clienteServidor } from "./supabase-servidor";
+import { TODAS_UNIDADES, unidadeAtivaCookie } from "./unidade-ativa";
 import type {
   AlcanceUnidades,
   Colaborador,
@@ -93,11 +94,14 @@ function converter(l: LinhaView): Remanejamento {
 export const listarRemanejamentos = cache(
   async (incluirExcluidos = false): Promise<Remanejamento[]> => {
     const supabase = clienteServidor();
+    const unidade = await unidadeAtivaLeitura();
+
     let query = supabase
       .from("vw_remanejamentos")
       .select("*")
       .order("data_inicio", { ascending: false });
     if (!incluirExcluidos) query = query.eq("excluido", false);
+    if (unidade !== null) query = query.eq("unidade_id", unidade);
 
     const { data, error } = await query;
 
@@ -110,11 +114,16 @@ export const listarRemanejamentos = cache(
 export const listarRemanejamentosExcluidos = cache(
   async (): Promise<Remanejamento[]> => {
     const supabase = clienteServidor();
-    const { data, error } = await supabase
+    const unidade = await unidadeAtivaLeitura();
+
+    let query = supabase
       .from("vw_remanejamentos")
       .select("*")
       .eq("excluido", true)
       .order("excluido_em", { ascending: false });
+    if (unidade !== null) query = query.eq("unidade_id", unidade);
+
+    const { data, error } = await query;
 
     if (error) throw new Error(`Falha ao ler excluídos: ${error.message}`);
     return (data as LinhaView[]).map(converter);
@@ -123,10 +132,15 @@ export const listarRemanejamentosExcluidos = cache(
 
 export const listarColaboradores = cache(async (): Promise<Colaborador[]> => {
   const supabase = clienteServidor();
-  const { data, error } = await supabase
+  const unidade = await unidadeAtivaLeitura();
+
+  let query = supabase
     .from("colaboradores")
     .select("id, matricula, nome, setores(nome), turnos(nome)")
     .order("nome");
+  if (unidade !== null) query = query.eq("unidade_id", unidade);
+
+  const { data, error } = await query;
 
   if (error) throw new Error(`Falha ao ler colaboradores: ${error.message}`);
 
@@ -150,25 +164,36 @@ export const listarColaboradores = cache(async (): Promise<Colaborador[]> => {
 
 export const obterListas = cache(async (): Promise<Listas> => {
   const supabase = clienteServidor();
+  const unidade = await unidadeAtivaLeitura();
+  // Objeto vazio quando não há unidade ativa: `.match({})` não filtra nada.
+  const naUnidade = unidade !== null ? { unidade_id: unidade } : {};
 
   const [setores, turnos, supervisores, profissionais, segmentos] =
     await Promise.all([
-      supabase.from("setores").select("nome").eq("ativo", true).order("nome"),
-      supabase.from("turnos").select("nome").order("nome"),
+      supabase
+        .from("setores")
+        .select("nome")
+        .eq("ativo", true)
+        .match(naUnidade)
+        .order("nome"),
+      supabase.from("turnos").select("nome").match(naUnidade).order("nome"),
       supabase
         .from("supervisores")
         .select("nome")
         .eq("ativo", true)
+        .match(naUnidade)
         .order("nome"),
       supabase
         .from("profissionais")
         .select("nome")
         .eq("ativo", true)
+        .match(naUnidade)
         .order("nome"),
       supabase
         .from("segmentos")
         .select("nome, regioes_corporais(nome)")
         .eq("ativo", true)
+        .match(naUnidade)
         .order("nome"),
     ]);
 
@@ -246,11 +271,15 @@ export async function obterColaborador(
   id: number,
 ): Promise<Colaborador | undefined> {
   const supabase = clienteServidor();
-  const { data } = await supabase
+  const unidade = await unidadeAtivaLeitura();
+
+  let query = supabase
     .from("colaboradores")
     .select("id, matricula, nome, setores(nome), turnos(nome)")
-    .eq("id", id)
-    .maybeSingle();
+    .eq("id", id);
+  if (unidade !== null) query = query.eq("unidade_id", unidade);
+
+  const { data } = await query.maybeSingle();
 
   if (!data) return undefined;
 
@@ -275,11 +304,12 @@ export async function obterRemanejamento(
   id: number,
 ): Promise<Remanejamento | undefined> {
   const supabase = clienteServidor();
-  const { data, error } = await supabase
-    .from("vw_remanejamentos")
-    .select("*")
-    .eq("id", id)
-    .maybeSingle();
+  const unidade = await unidadeAtivaLeitura();
+
+  let query = supabase.from("vw_remanejamentos").select("*").eq("id", id);
+  if (unidade !== null) query = query.eq("unidade_id", unidade);
+
+  const { data, error } = await query.maybeSingle();
 
   if (error || !data) return undefined;
   return converter(data as LinhaView);
@@ -290,11 +320,17 @@ export async function historicoDoColaborador(
   id: number,
 ): Promise<Remanejamento[]> {
   const supabase = clienteServidor();
-  const { data, error } = await supabase
+  const unidade = await unidadeAtivaLeitura();
+
+  let query = supabase
     .from("vw_remanejamentos")
     .select("*")
     .eq("colaborador_id", id)
+    .eq("excluido", false)
     .order("data_inicio", { ascending: false });
+  if (unidade !== null) query = query.eq("unidade_id", unidade);
+
+  const { data, error } = await query;
 
   if (error) throw new Error(`Falha ao ler histórico: ${error.message}`);
   return (data as LinhaView[]).map(converter);
@@ -351,17 +387,36 @@ export interface ListasAdmin {
 
 export const obterListasAdmin = cache(async (): Promise<ListasAdmin> => {
   const supabase = clienteServidor();
+  const unidade = await unidadeAtivaLeitura();
+  const naUnidade = unidade !== null ? { unidade_id: unidade } : {};
 
   const [setores, turnos, supervisores, profissionais, regioes, segmentos] =
     await Promise.all([
-      supabase.from("setores").select("id, nome, ativo").order("nome"),
-      supabase.from("turnos").select("id, nome").order("nome"),
-      supabase.from("supervisores").select("id, nome, ativo").order("nome"),
-      supabase.from("profissionais").select("id, nome, ativo").order("nome"),
-      supabase.from("regioes_corporais").select("id, nome").order("nome"),
+      supabase
+        .from("setores")
+        .select("id, nome, ativo")
+        .match(naUnidade)
+        .order("nome"),
+      supabase.from("turnos").select("id, nome").match(naUnidade).order("nome"),
+      supabase
+        .from("supervisores")
+        .select("id, nome, ativo")
+        .match(naUnidade)
+        .order("nome"),
+      supabase
+        .from("profissionais")
+        .select("id, nome, ativo")
+        .match(naUnidade)
+        .order("nome"),
+      supabase
+        .from("regioes_corporais")
+        .select("id, nome")
+        .match(naUnidade)
+        .order("nome"),
       supabase
         .from("segmentos")
         .select("id, nome, ativo, regioes_corporais(id, nome)")
+        .match(naUnidade)
         .order("nome"),
     ]);
 
@@ -472,6 +527,36 @@ export const listarUnidadesPermitidas = cache(async (): Promise<Unidade[]> => {
   } catch {
     return [];
   }
+});
+
+/**
+ * Unidade que filtra TODA a leitura de dados — o "onde eu estou" do
+ * seletor no Nav. Devolve `null` quando a escolha é o consolidado de
+ * todas as unidades (aí nenhuma consulta filtra, e a RLS sozinha decide).
+ *
+ * Sem isto, um gestor com alcance "todas" via os dados de todas as
+ * unidades somados o tempo inteiro, e trocar de unidade no seletor não
+ * mudava nada na tela.
+ *
+ * Nunca confia no cookie: só aceita unidade que o banco confirma como
+ * permitida. Cookie inválido ou acesso revogado cai para a unidade de casa.
+ */
+export const unidadeAtivaLeitura = cache(async (): Promise<number | null> => {
+  const escolha = unidadeAtivaCookie();
+  if (escolha === TODAS_UNIDADES) return null;
+
+  const permitidas = await listarUnidadesPermitidas();
+  if (permitidas.length === 0) return null;
+
+  if (typeof escolha === "number" && permitidas.some((u) => u.id === escolha)) {
+    return escolha;
+  }
+
+  const perfil = await perfilAtual();
+  const casa = perfil?.unidade_id ?? null;
+  if (casa && permitidas.some((u) => u.id === casa)) return casa;
+
+  return permitidas[0].id;
 });
 
 /** Unidades extras liberadas para um perfil específico (alcance = 'especificas'). */

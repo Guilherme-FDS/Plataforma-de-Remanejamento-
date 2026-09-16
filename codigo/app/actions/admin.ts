@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { clienteServidor } from "@/lib/supabase-servidor";
-import { unidadeAtivaCookie } from "@/lib/unidade-ativa";
+import { TODAS_UNIDADES, unidadeAtivaCookie } from "@/lib/unidade-ativa";
 
 type SupabaseCliente = ReturnType<typeof clienteServidor>;
 
@@ -12,7 +12,12 @@ async function resolverUnidadeEscrita(
   unidadeHome: number,
 ): Promise<number> {
   const idCookie = unidadeAtivaCookie();
-  if (!idCookie || idCookie === unidadeHome) return unidadeHome;
+  if (
+    !idCookie ||
+    idCookie === TODAS_UNIDADES ||
+    idCookie === unidadeHome
+  )
+    return unidadeHome;
 
   const { data } = await supabase.rpc("minhas_unidades_permitidas");
   const permitidas = ((data ?? []) as { unidade_id: number }[]).map(

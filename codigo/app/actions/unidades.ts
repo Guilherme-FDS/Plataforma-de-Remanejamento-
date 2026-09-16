@@ -3,7 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { clienteServidor } from "@/lib/supabase-servidor";
-import { COOKIE_UNIDADE_ATIVA } from "@/lib/unidade-ativa";
+import {
+  COOKIE_UNIDADE_ATIVA,
+  TODAS_UNIDADES,
+  type EscolhaUnidade,
+} from "@/lib/unidade-ativa";
 
 type Resultado = { ok: boolean; erro?: string };
 
@@ -62,29 +66,36 @@ export async function toggleUnidade(id: number, ativo: boolean): Promise<Resulta
 }
 
 /**
- * Troca a "unidade ativa" — só quem tem alcance "todas" ou "específicas" com
- * mais de uma unidade vê esse seletor. Valida contra
+ * Troca a "unidade ativa" — o contexto em que a pessoa está trabalhando.
+ * Define tanto o que ela enxerga quanto onde os lançamentos são gravados.
+ *
+ * Aceita o id de uma unidade ou `TODAS_UNIDADES` (consolidado, só faz
+ * sentido para quem enxerga mais de uma). Valida contra
  * `minhas_unidades_permitidas()` antes de gravar o cookie: nunca confia no
- * id vindo do cliente sem checar no banco.
+ * valor vindo do cliente sem checar no banco.
  */
-export async function definirUnidadeAtiva(id: number): Promise<Resultado> {
+export async function definirUnidadeAtiva(
+  escolha: EscolhaUnidade,
+): Promise<Resultado> {
   const supabase = clienteServidor();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, erro: "Sem sessão ativa." };
 
-  const { data, error } = await supabase.rpc("minhas_unidades_permitidas");
-  if (error) return { ok: false, erro: error.message };
+  if (escolha !== TODAS_UNIDADES) {
+    const { data, error } = await supabase.rpc("minhas_unidades_permitidas");
+    if (error) return { ok: false, erro: error.message };
 
-  const permitidas = ((data ?? []) as { unidade_id: number }[]).map(
-    (r) => r.unidade_id,
-  );
-  if (!permitidas.includes(id)) {
-    return { ok: false, erro: "Você não tem acesso a essa unidade." };
+    const permitidas = ((data ?? []) as { unidade_id: number }[]).map(
+      (r) => r.unidade_id,
+    );
+    if (!permitidas.includes(escolha)) {
+      return { ok: false, erro: "Você não tem acesso a essa unidade." };
+    }
   }
 
-  cookies().set(COOKIE_UNIDADE_ATIVA, String(id), {
+  cookies().set(COOKIE_UNIDADE_ATIVA, String(escolha), {
     path: "/",
     maxAge: 60 * 60 * 24 * 365,
     sameSite: "lax",
