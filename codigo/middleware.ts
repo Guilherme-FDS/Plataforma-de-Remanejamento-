@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { HEADER_CAMINHO } from "@/lib/caminho";
 
 /**
  * Renova a sessão a cada requisição e barra quem não está logado.
@@ -9,7 +10,12 @@ import { NextResponse, type NextRequest } from "next/server";
  * em vez de um painel vazio sem explicação.
  */
 export async function middleware(request: NextRequest) {
-  let resposta = NextResponse.next({ request });
+  // Cópia, não mutação: os headers de NextRequest são somente leitura, e a
+  // forma suportada de repassar um header ao servidor é recriar o objeto.
+  const cabecalhos = new Headers(request.headers);
+  cabecalhos.set(HEADER_CAMINHO, request.nextUrl.pathname);
+
+  let resposta = NextResponse.next({ request: { headers: cabecalhos } });
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const chave = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -28,7 +34,12 @@ export async function middleware(request: NextRequest) {
         for (const { name, value } of paraGravar) {
           request.cookies.set(name, value);
         }
-        resposta = NextResponse.next({ request });
+        // Reconstrói a partir de request.headers: `request.cookies.set()`
+        // escreve de volta no header `cookie`, e a cópia feita lá em cima é
+        // anterior a essa escrita — usá-la aqui entregaria a sessão velha.
+        const atualizados = new Headers(request.headers);
+        atualizados.set(HEADER_CAMINHO, request.nextUrl.pathname);
+        resposta = NextResponse.next({ request: { headers: atualizados } });
         for (const { name, value, options } of paraGravar) {
           resposta.cookies.set(name, value, options);
         }

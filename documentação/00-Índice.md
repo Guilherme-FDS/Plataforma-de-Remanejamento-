@@ -14,6 +14,7 @@ código-fonte e o repositório Git).
 	- [[2026-09-13]] — protótipo, Supabase/login/RLS, PWA, identidade visual
 	- [[2026-09-14]] — edição de casos, admin de listas, multi-unidade, relatórios, gestão de usuários
 	- [[2026-09-15]] — correções de RLS/migration, restrição de visualizador, reorganização de pastas
+	- [[2026-09-16]] — análise do produto, papel na RLS, MFA, requisitos comerciais
 - [[Manual-Tecnico]] — arquitetura, stack, banco de dados, deploy, como dar manutenção
 - [[Manual-Usuario]] — como usar cada tela, o que cada indicador calcula, o que é automático x manual
 

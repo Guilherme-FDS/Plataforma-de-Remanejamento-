@@ -253,41 +253,69 @@ export async function salvarRemanejamento(dados: {
 
   // Encontra ou cria colaborador
   let colaboradorId: number;
+  let existente: { id: number; setor_id: number | null; turno_id: number | null } | null =
+    null;
 
   if (dados.matricula !== null) {
     // Mesma matrícula pode existir em unidades diferentes — a busca precisa
     // ficar dentro da unidade de destino.
-    const { data: existente } = await supabase
+    const { data } = await supabase
       .from("colaboradores")
-      .select("id")
+      .select("id, setor_id, turno_id")
       .eq("matricula", dados.matricula)
       .eq("unidade_id", unidadeId)
       .maybeSingle();
+    existente = data;
+  } else {
+    /*
+     * Sem matrícula, o nome é o único identificador que existe. Buscar por
+     * ele não é elegante, mas a alternativa — inserir sempre — criava uma
+     * pessoa nova a cada lançamento das três colaboradoras que a planilha
+     * trouxe sem matrícula, quebrando justamente o histórico e a
+     * reincidência que o sistema existe para enxergar.
+     *
+     * `ilike` sem curinga é igualdade sem diferenciar maiúsculas.
+     */
+    const { data: homonimos } = await supabase
+      .from("colaboradores")
+      .select("id, setor_id, turno_id")
+      .is("matricula", null)
+      .ilike("nome", dados.nome.trim())
+      .eq("unidade_id", unidadeId);
 
-    if (existente) {
-      colaboradorId = existente.id;
-    } else {
-      const { data: novo, error: erroColab } = await supabase
+    // Dois cadastros sem matrícula com o mesmo nome: não dá para decidir
+    // aqui qual é a pessoa, e escolher errado junta o histórico clínico de
+    // duas. Para o lançamento e pede a matrícula, que resolve de vez.
+    if ((homonimos?.length ?? 0) > 1) {
+      return {
+        ok: false,
+        erro: `Há mais de um cadastro sem matrícula com o nome "${dados.nome.trim()}". Informe a matrícula para identificar a pessoa certa.`,
+      };
+    }
+    existente = homonimos?.[0] ?? null;
+  }
+
+  if (existente) {
+    colaboradorId = existente.id;
+
+    // A pessoa mudou de setor ou turno desde o último caso: o cadastro passa
+    // a valer o dado novo. O remanejamento antigo guarda o próprio setor, e
+    // o trigger de auditoria registra a mudança.
+    if (
+      existente.setor_id !== setorRes.data.id ||
+      existente.turno_id !== turnoRes.data.id
+    ) {
+      await supabase
         .from("colaboradores")
-        .insert({
-          matricula: dados.matricula,
-          nome: dados.nome,
-          setor_id: setorRes.data.id,
-          turno_id: turnoRes.data.id,
-          unidade_id: unidadeId,
-        })
-        .select("id")
-        .single();
-      if (erroColab || !novo)
-        return { ok: false, erro: erroColab?.message ?? "Falha ao cadastrar colaborador." };
-      colaboradorId = novo.id;
+        .update({ setor_id: setorRes.data.id, turno_id: turnoRes.data.id })
+        .eq("id", existente.id);
     }
   } else {
     const { data: novo, error: erroColab } = await supabase
       .from("colaboradores")
       .insert({
-        matricula: null,
-        nome: dados.nome,
+        matricula: dados.matricula,
+        nome: dados.nome.trim(),
         setor_id: setorRes.data.id,
         turno_id: turnoRes.data.id,
         unidade_id: unidadeId,
@@ -295,7 +323,10 @@ export async function salvarRemanejamento(dados: {
       .select("id")
       .single();
     if (erroColab || !novo)
-      return { ok: false, erro: erroColab?.message ?? "Falha ao cadastrar colaborador." };
+      return {
+        ok: false,
+        erro: erroColab?.message ?? "Falha ao cadastrar colaborador.",
+      };
     colaboradorId = novo.id;
   }
 

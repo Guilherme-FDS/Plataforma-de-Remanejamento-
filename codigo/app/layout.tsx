@@ -1,4 +1,6 @@
 import type { Metadata, Viewport } from "next";
+import { headers } from "next/headers";
+import BloqueioMfa from "@/components/BloqueioMfa";
 import Nav from "@/components/Nav";
 import ServiceWorker from "@/components/ServiceWorker";
 import {
@@ -6,6 +8,8 @@ import {
   perfilAtual,
   unidadeAtivaLeitura,
 } from "@/lib/dados";
+import { HEADER_CAMINHO } from "@/lib/caminho";
+import { estadoMfa } from "@/lib/mfa";
 import { TODAS_UNIDADES, unidadeAtivaCookie } from "@/lib/unidade-ativa";
 import "./globals.css";
 
@@ -62,6 +66,19 @@ export default async function RootLayout({
       ? TODAS_UNIDADES
       : ((await unidadeAtivaLeitura()) ?? undefined);
 
+  /* ---------------------------------------------------------- bloqueio MFA
+   * A RLS (migration 0012) já recusa o dado; isto troca o painel vazio por
+   * uma explicação. `/seguranca` fica de fora da lista, senão o aviso
+   * cobriria a própria tela onde o cadastro é feito.
+   */
+  const caminho = headers().get(HEADER_CAMINHO) ?? "";
+  const mfa = perfil ? await estadoMfa() : null;
+  const rotaLivre =
+    caminho.startsWith("/seguranca") ||
+    caminho.startsWith("/login") ||
+    caminho.startsWith("/auth/");
+  const bloquearPorMfa = !!mfa?.bloqueado && !rotaLivre;
+
   return (
     <html lang="pt-BR">
       <body className="min-h-[100dvh] bg-slate-50 antialiased">
@@ -80,6 +97,7 @@ export default async function RootLayout({
                   unidadeNome:
                     unidades.find((u) => u.id === perfil.unidade_id)?.nome ??
                     null,
+                  mfaAtivo: !!mfa?.temFator,
                 }
               : null
           }
@@ -88,7 +106,11 @@ export default async function RootLayout({
           unidadeAtiva={unidadeAtiva}
         />
         <main className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
-          {children}
+          {bloquearPorMfa ? (
+            <BloqueioMfa precisaConfirmar={!!mfa?.precisaConfirmar} />
+          ) : (
+            children
+          )}
         </main>
       </body>
     </html>

@@ -15,6 +15,8 @@ export interface PerfilNav {
   admin: boolean;
   alcanceUnidades: string;
   unidadeNome: string | null;
+  /** Já cadastrou autenticador. Mostrado no modal "Meus dados". */
+  mfaAtivo: boolean;
 }
 
 const FUNCAO_ROTULO: Record<string, string> = {
@@ -228,10 +230,29 @@ export default function Nav({
                 ALCANCE_ROTULO[perfil.alcanceUnidades] ?? perfil.alcanceUnidades
               }
             />
+            <LinhaPerfil
+              rotulo="Verificação em 2 etapas"
+              valor={perfil.mfaAtivo ? "Ativa" : "Não ativada"}
+            />
           </dl>
+
+          <Link
+            href="/seguranca"
+            onClick={() => setVerPerfil(false)}
+            className={`mt-4 block h-10 rounded-lg text-center text-sm font-medium leading-10 transition ${
+              perfil.mfaAtivo
+                ? "border border-slate-200 text-slate-600 hover:bg-slate-50"
+                : "bg-gtf-700 text-white hover:bg-gtf-800"
+            }`}
+          >
+            {perfil.mfaAtivo
+              ? "Gerenciar segurança"
+              : "Ativar verificação em 2 etapas"}
+          </Link>
+
           <p className="mt-4 text-xs leading-relaxed text-slate-400">
-            Para alterar qualquer um destes dados, procure um administrador da
-            plataforma.
+            Para alterar qualquer um dos demais dados, procure um administrador
+            da plataforma.
           </p>
         </Modal>
       )}

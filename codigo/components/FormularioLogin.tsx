@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { clienteNavegador } from "@/lib/supabase-navegador";
+import DesafioMfa from "./DesafioMfa";
 
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
@@ -13,6 +14,7 @@ export default function FormularioLogin({ destino }: { destino: string }) {
   const [senha, setSenha] = useState("");
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
+  const [pedeCodigo, setPedeCodigo] = useState(false);
   const [mostraEsqueci, setMostraEsqueci] = useState(false);
   const [emailReset, setEmailReset] = useState("");
   const [enviandoReset, setEnviandoReset] = useState(false);
@@ -39,6 +41,24 @@ export default function FormularioLogin({ destino }: { destino: string }) {
       return;
     }
 
+    // A senha só entrega AAL1. Se a conta tem autenticador cadastrado,
+    // `nextLevel` vem como "aal2" e a sessão ainda não vale para ler dado
+    // clínico — a RLS (migration 0012) recusa. Pede o código antes de sair
+    // da tela, em vez de deixar o usuário cair num painel vazio.
+    const { data: nivel } =
+      await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+
+    if (nivel?.nextLevel === "aal2" && nivel.currentLevel !== "aal2") {
+      setPedeCodigo(true);
+      setEnviando(false);
+      return;
+    }
+
+    router.replace(destino);
+    router.refresh();
+  }
+
+  function concluir() {
     router.replace(destino);
     router.refresh();
   }
@@ -61,6 +81,29 @@ export default function FormularioLogin({ destino }: { destino: string }) {
 
   const campo =
     "h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-gtf-600 focus:outline-none focus:ring-1 focus:ring-gtf-600";
+
+  if (pedeCodigo) {
+    return (
+      <div className="space-y-4">
+        <p className="text-sm text-slate-600">
+          Senha conferida. Agora abra o aplicativo autenticador e digite o
+          código de 6 dígitos.
+        </p>
+        <DesafioMfa aoConfirmar={concluir} />
+        <button
+          type="button"
+          onClick={async () => {
+            await clienteNavegador().auth.signOut();
+            setPedeCodigo(false);
+            setSenha("");
+          }}
+          className="block w-full text-center text-xs text-slate-400 hover:text-slate-700"
+        >
+          ← Entrar com outra conta
+        </button>
+      </div>
+    );
+  }
 
   if (mostraEsqueci) {
     return (

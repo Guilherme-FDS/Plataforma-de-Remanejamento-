@@ -50,6 +50,15 @@ Detalhes completos em [[Manual-Tecnico]].
 
 ## Feito recentemente
 
+- [x] **`papel` passa a valer na RLS** (migration `0011`): visualizador,
+      lançador e operador deixam de ser regra só do TypeScript. Antes, um
+      visualizador logado podia escrever direto no PostgREST com a `anon
+      key` — a hierarquia era decorativa no banco. `DELETE` físico foi
+      removido de todas as tabelas de dado — [[2026-09-16]]
+- [x] **MFA (verificação em duas etapas)** exigido pela própria RLS
+      (migration `0012`), tela `/seguranca` para cadastro por QR, segunda
+      etapa no login, e painel de adesão da equipe para o admin —
+      [[2026-09-16]]
 - [x] Exportar relatório em **XLSX** em vez de CSV — [[2026-09-15]]
 - [x] PDF do relatório abre em **aba nova** (`/relatorios/imprimir`), só
       com cabeçalho + tabela — [[2026-09-15]]
@@ -75,6 +84,9 @@ Detalhes completos em [[Manual-Tecnico]].
 
 ## Pendente / em aberto
 
+> A lista completa desta rodada de profissionalização (segurança,
+> funcionalidade, dado, técnico e comercial) está em [[2026-09-16]].
+
 > Atualizado manualmente. Ver o arquivo do dia em que o item foi pedido
 > para o contexto completo da conversa.
 
@@ -88,6 +100,12 @@ Detalhes completos em [[Manual-Tecnico]].
 
 ### Configurações do Supabase (painel, não é código)
 
+- [ ] Rodar as migrations `0011_papel_na_rls.sql` e `0012_mfa.sql` no SQL
+      Editor, nesta ordem.
+- [ ] **Backup automático** — exige plano Pro (~R$ 140/mês, repassado ao
+      cliente na proposta comercial).
+- [ ] Depois que toda a equipe cadastrar o autenticador, ligar "Exigir de
+      todos" em `/seguranca`.
 - [ ] Desligar **"Allow new users to sign up"** — está ligado, mas o
       sistema não tem auto-cadastro: todo acesso nasce de convite do
       administrador. Não vaza dado (sem linha em `perfis`, a RLS bloqueia
