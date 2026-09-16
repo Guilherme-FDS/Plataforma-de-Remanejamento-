@@ -84,6 +84,8 @@ configurada). Nenhuma delas é reexecutável às cegas — algumas fazem
 | `0006_multi_unidade.sql` | Tabela `unidades`, coluna `unidade_id` em todas as tabelas, função `minha_unidade_id()`, RLS por unidade |
 | `0007_corrige_recursao_perfil_admin.sql` | Corrige recursão infinita na policy `perfil_admin` (ver "Armadilhas conhecidas" abaixo) |
 | `0008_hierarquia_e_exclusao.sql` | `papel` ganha `lancador`; `alcance_unidades` em `perfis`; tabela `perfil_unidades_extra`; função `minhas_unidades_permitidas()` substitui `minha_unidade_id()` na RLS; soft delete em `remanejamentos`; admin pode gerenciar `unidades` |
+| `0009_endurece_funcoes.sql` | `search_path` fixo em `situacao_remanejamento` e `tocar_atualizado_em`; tira as funções de trigger e as helpers de RLS do alcance de `anon` (responde ao Security Advisor) |
+| `0010_recria_view_remanejamentos.sql` | Recria `vw_remanejamentos` para enxergar as colunas adicionadas depois da `0001` (`unidade_id`, `excluido`, …) — ver armadilha 4 abaixo |
 
 ### Tabela `perfis`
 
@@ -187,7 +189,19 @@ Todas em `public`, `stable`, com `set search_path = public`:
    engano. Foi exatamente isso que aconteceu antes da correção em
    `eb9062a`: a recursão do item 1 fazia a leitura do papel falhar, e o
    código antigo liberava a edição para quem devia ser bloqueado.
-4. Nome e matrícula do colaborador são **travados** na tela de edição de
+4. **Coluna nova em `remanejamentos` ou `colaboradores` exige recriar a
+   view `vw_remanejamentos`.** A view é definida com `select r.*`, e o
+   PostgreSQL expande esse `*` no momento em que a view é criada,
+   congelando a lista de colunas. Adicionar coluna na tabela **não** faz
+   ela aparecer na view. Como `CREATE OR REPLACE VIEW` só aceita colunas
+   novas no fim da lista, a recriação tem que ser `DROP VIEW` +
+   `CREATE VIEW` — sempre mantendo `with (security_invoker = true)`, senão
+   a view ignora a RLS e vira um vazamento de todos os dados clínicos.
+   (Foi o que derrubou a produção em 2026-09-15: a `0008` adicionou
+   `excluido` na tabela, a view não enxergou, e o app quebrou com
+   `column vw_remanejamentos.excluido does not exist`. Corrigido na
+   migration `0010`.)
+5. Nome e matrícula do colaborador são **travados** na tela de edição de
    caso, de propósito — evita que um erro de digitação "corrija" a
    identidade e quebre o vínculo com o histórico. Ver [[Manual-Usuario]].
 
