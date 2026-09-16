@@ -68,6 +68,21 @@ export default async function RootLayout({
         <ServiceWorker />
         <Nav
           usuario={perfil?.nome ?? null}
+          perfil={
+            perfil
+              ? {
+                  nome: perfil.nome,
+                  email: perfil.email,
+                  funcao: perfil.funcao,
+                  papel: perfil.papel,
+                  admin: perfil.admin,
+                  alcanceUnidades: perfil.alcance_unidades,
+                  unidadeNome:
+                    unidades.find((u) => u.id === perfil.unidade_id)?.nome ??
+                    null,
+                }
+              : null
+          }
           podeGerenciar={perfil?.papel === "lancador" || perfil?.papel === "operador"}
           unidades={unidades}
           unidadeAtiva={unidadeAtiva}

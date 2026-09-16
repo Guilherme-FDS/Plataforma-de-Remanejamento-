@@ -94,6 +94,57 @@ export function estaAberto(r: Remanejamento, ref: Date = hoje()): boolean {
   return SITUACOES_ABERTAS.includes(situacaoDe(r, ref));
 }
 
+export interface PendenciaAutomatica {
+  remanejamentoId: number;
+  colaboradorId: number;
+  nome: string;
+  matricula: number | null;
+  setor: string | null;
+  motivos: string[];
+}
+
+/**
+ * Lançamentos vigentes com dado faltando. Não fica guardado em lugar
+ * nenhum: é recalculado a cada carregamento da tela, então some sozinho
+ * assim que o campo é preenchido — não existe "pendência resolvida" para
+ * ficar presa na lista.
+ *
+ * Olha só o que está em aberto: caso já encerrado com dado incompleto é
+ * histórico, não é trabalho a fazer.
+ */
+export function pendenciasAutomaticas(
+  itens: Remanejamento[],
+  ref: Date = hoje(),
+): PendenciaAutomatica[] {
+  const saida: PendenciaAutomatica[] = [];
+
+  for (const r of itens) {
+    if (!estaAberto(r, ref)) continue;
+
+    const motivos: string[] = [];
+    if (r.matricula === null) motivos.push("Sem matrícula");
+    if (situacaoDe(r, ref) === "sem_previsao")
+      motivos.push("Sem duração — não dá para acompanhar o prazo");
+    if (!r.segmento || r.regiao === "Não classificado")
+      motivos.push("Segmento do corpo não classificado");
+    if (r.tipo === "indefinido") motivos.push("Tipo de restrição indefinido");
+
+    if (motivos.length > 0) {
+      saida.push({
+        remanejamentoId: r.id,
+        colaboradorId: r.colaboradorId,
+        nome: r.nome,
+        matricula: r.matricula,
+        setor: r.setor,
+        motivos,
+      });
+    }
+  }
+
+  // Quem tem mais buracos aparece primeiro.
+  return saida.sort((a, b) => b.motivos.length - a.motivos.length);
+}
+
 export type SituacaoRelatorio = "todos" | "abertos" | "encerrados";
 
 /**

@@ -2,9 +2,39 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { definirUnidadeAtiva } from "@/app/actions/unidades";
+import { Modal } from "./ui";
 import Logo from "./Logo";
+
+export interface PerfilNav {
+  nome: string;
+  email: string;
+  funcao: string | null;
+  papel: string;
+  admin: boolean;
+  alcanceUnidades: string;
+  unidadeNome: string | null;
+}
+
+const FUNCAO_ROTULO: Record<string, string> = {
+  medico: "Médico(a)",
+  enfermeiro: "Enfermeiro(a)",
+  ergonomista: "Ergonomista",
+  tecnico_seguranca: "Técnico(a) de Segurança",
+};
+
+const PAPEL_ROTULO: Record<string, string> = {
+  visualizador: "Visualizador — só consulta e exporta",
+  lancador: "Lançador — cria e edita casos, não exclui",
+  operador: "Operador — cria, edita e exclui casos",
+};
+
+const ALCANCE_ROTULO: Record<string, string> = {
+  propria: "Só a própria unidade",
+  todas: "Todas as unidades",
+  especificas: "A própria + unidades liberadas",
+};
 
 const ITENS = [
   { href: "/", rotulo: "Painel", icone: IconePainel },
@@ -33,11 +63,14 @@ function iniciais(nome: string) {
 
 export default function Nav({
   usuario,
+  perfil = null,
   podeGerenciar = false,
   unidades = [],
   unidadeAtiva,
 }: {
   usuario: string | null;
+  /** Dados do próprio usuário, mostrados ao clicar no nome. */
+  perfil?: PerfilNav | null;
   /** lançador ou operador — visualizador fica com isto em false. */
   podeGerenciar?: boolean;
   /** Unidades que o usuário pode ver. Só aparece seletor se houver mais de uma. */
@@ -46,6 +79,7 @@ export default function Nav({
   unidadeAtiva?: number | "todas";
 }) {
   const caminho = usePathname();
+  const [verPerfil, setVerPerfil] = useState(false);
 
   // Login e a página de impressão de relatório não têm navegação.
   if (caminho.startsWith("/login") || caminho.startsWith("/relatorios/imprimir"))
@@ -112,16 +146,18 @@ export default function Nav({
                 {/* Quem está logado precisa ficar visível: o aparelho é
                     compartilhado entre a equipe, e lançar no login errado
                     grava o profissional errado no prontuário. */}
-                <span
-                  className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-gtf-50 text-xs font-semibold text-gtf-700"
-                  title={usuario}
-                  aria-hidden
+                <button
+                  onClick={() => setVerPerfil(true)}
+                  className="flex items-center gap-2 rounded-lg px-1 py-1 transition hover:bg-slate-50 sm:gap-3"
+                  title="Ver meus dados"
                 >
-                  {iniciais(usuario)}
-                </span>
-                <span className="hidden max-w-40 truncate text-sm text-slate-600 lg:inline">
-                  {usuario}
-                </span>
+                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-gtf-50 text-xs font-semibold text-gtf-700">
+                    {iniciais(usuario)}
+                  </span>
+                  <span className="hidden max-w-40 truncate text-sm text-slate-600 lg:inline">
+                    {usuario}
+                  </span>
+                </button>
 
                 <form action="/auth/sair" method="post" className="flex">
                   <button
@@ -163,7 +199,52 @@ export default function Nav({
 
       {/* Espaço para a barra inferior não cobrir o fim do conteúdo. */}
       <div className="h-16 sm:hidden" aria-hidden />
+
+      {verPerfil && perfil && (
+        <Modal titulo="Meus dados" onFechar={() => setVerPerfil(false)}>
+          <dl className="space-y-3 text-sm">
+            <LinhaPerfil rotulo="Nome" valor={perfil.nome} />
+            <LinhaPerfil rotulo="E-mail" valor={perfil.email} />
+            <LinhaPerfil
+              rotulo="Função"
+              valor={
+                perfil.funcao
+                  ? (FUNCAO_ROTULO[perfil.funcao] ?? perfil.funcao)
+                  : "—"
+              }
+            />
+            <LinhaPerfil
+              rotulo="Papel"
+              valor={PAPEL_ROTULO[perfil.papel] ?? perfil.papel}
+            />
+            <LinhaPerfil
+              rotulo="Administrador"
+              valor={perfil.admin ? "Sim" : "Não"}
+            />
+            <LinhaPerfil rotulo="Unidade" valor={perfil.unidadeNome ?? "—"} />
+            <LinhaPerfil
+              rotulo="Acesso a unidades"
+              valor={
+                ALCANCE_ROTULO[perfil.alcanceUnidades] ?? perfil.alcanceUnidades
+              }
+            />
+          </dl>
+          <p className="mt-4 text-xs leading-relaxed text-slate-400">
+            Para alterar qualquer um destes dados, procure um administrador da
+            plataforma.
+          </p>
+        </Modal>
+      )}
     </>
+  );
+}
+
+function LinhaPerfil({ rotulo, valor }: { rotulo: string; valor: string }) {
+  return (
+    <div className="flex justify-between gap-4 border-b border-slate-50 pb-2">
+      <dt className="shrink-0 text-slate-500">{rotulo}</dt>
+      <dd className="text-right font-medium text-slate-900">{valor}</dd>
+    </div>
   );
 }
 

@@ -134,20 +134,38 @@ trocar para uma versão limpa em aba separada — ver [[Escopo]])*.
 
 ### Pendências
 
-> ⚠️ **Importante**: hoje esta tela é só um **retrato estático da
-> importação inicial** da planilha, feita uma única vez na criação do
-> sistema. Ela **não é** um recurso vivo:
->
-> - É **somente leitura** — não tem como clicar num item e abrir o
->   colaborador para corrigir, nem marcar como resolvido.
-> - **Não existe verificação automática** — um lançamento feito hoje que
->   fique incompleto (sem matrícula, sem segmento, etc.) **não** aparece
->   aqui. A lista é fixa, do que a planilha original trouxe de
->   inconsistente.
->
-> Virar uma tela de ação de verdade (abrir o colaborador, corrigir, marcar
-> resolvido, com ou sem detecção automática de novos lançamentos
-> incompletos) é uma decisão de produto ainda em aberto — ver [[Escopo]].
+Tem duas partes, que funcionam de formas bem diferentes.
+
+**"Precisa de correção" — automática e ao vivo**
+
+A plataforma varre sozinha os casos **vigentes** e lista os que estão com
+dado faltando. Quatro situações entram:
+
+- Sem matrícula
+- Sem duração (por isso sem previsão de término, e sem como acompanhar)
+- Segmento do corpo não classificado
+- Tipo de restrição indefinido
+
+Cada item tem o nome do colaborador (link para a ficha) e um botão
+**Corrigir**, que leva direto para a edição do caso. **Assim que você
+preenche o campo, o item some da lista sozinho** — não precisa marcar nada
+como resolvido, porque a lista é recalculada a cada vez que a tela abre.
+
+Casos já encerrados não entram, mesmo com dado incompleto: são histórico,
+não trabalho pendente.
+
+**"Da importação inicial" — a lista fixa da planilha**
+
+São as inconsistências que a planilha original trazia, registradas uma
+única vez quando o sistema foi criado. Essa parte **não se atualiza
+sozinha**: depois de conferir e acertar o que for preciso, use o botão
+**Marcar resolvida** (disponível para lançador e operador). Se algo passou
+batido, dá para **Reabrir**.
+
+O nome do colaborador vira link quando bate com alguém cadastrado. Como
+essa lista antiga guarda o nome como texto digitado, sem vínculo com o
+cadastro, alguns registros ficam sem link — não há como recuperar isso nos
+dados antigos.
 
 ### Configurações
 
