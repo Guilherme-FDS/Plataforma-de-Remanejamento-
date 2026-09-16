@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { clienteAdmin } from "@/lib/supabase-admin";
 import { clienteServidor } from "@/lib/supabase-servidor";
 
 type Resultado = { ok: boolean; erro?: string };
@@ -17,51 +16,37 @@ export interface ResumoMfa {
 /**
  * Quem da equipe já cadastrou o segundo fator. Só admin.
  *
- * Precisa da service role: `auth.mfa_factors` não é legível pelo usuário
- * comum, e o `listUsers` administrativo já devolve os fatores de cada conta.
+ * Delega para `adesao_mfa()` (migration 0013), que lê `auth.mfa_factors`
+ * como SECURITY DEFINER e devolve zero linha para quem não é admin.
+ *
+ * NÃO tente resolver isto com `auth.admin.listUsers()`: o campo `factors`
+ * vem vazio na listagem (só `getUserById` o preenche), e o painel passa a
+ * contar todo mundo como sem autenticador. Foi exatamente o bug que esta
+ * função substitui.
  */
 export async function resumoMfa(): Promise<ResumoMfa | null> {
   const supabase = clienteServidor();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
 
-  const { data: meuPerfil } = await supabase
-    .from("perfis")
-    .select("admin")
-    .eq("id", user.id)
-    .maybeSingle();
-  if (!(meuPerfil as { admin?: boolean } | null)?.admin) return null;
+  const { data, error } = await supabase.rpc("adesao_mfa");
+  if (error) return null;
 
-  const admin = clienteAdmin();
-  const [usuarios, perfis] = await Promise.all([
-    admin.auth.admin.listUsers({ perPage: 200 }),
-    supabase.from("perfis").select("id, nome, ativo"),
-  ]);
-
-  const ativos = ((perfis.data ?? []) as {
+  const linhas = (data ?? []) as {
     id: string;
     nome: string;
-    ativo: boolean;
-  }[]).filter((p) => p.ativo);
+    tem_fator: boolean;
+  }[];
 
-  const comFatorIds = new Set(
-    (usuarios.data?.users ?? [])
-      .filter((u) =>
-        (u.factors ?? []).some((f) => f.status === "verified"),
-      )
-      .map((u) => u.id),
-  );
+  // Sem linha nenhuma = não é admin. O painel simplesmente não aparece.
+  if (linhas.length === 0) return null;
 
-  const faltando = ativos
-    .filter((p) => !comFatorIds.has(p.id))
-    .map((p) => p.nome)
+  const faltando = linhas
+    .filter((l) => !l.tem_fator)
+    .map((l) => l.nome)
     .sort((a, b) => a.localeCompare(b));
 
   return {
-    total: ativos.length,
-    comFator: ativos.length - faltando.length,
+    total: linhas.length,
+    comFator: linhas.length - faltando.length,
     faltando,
   };
 }
