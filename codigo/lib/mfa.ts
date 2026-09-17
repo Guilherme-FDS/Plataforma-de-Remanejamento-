@@ -6,6 +6,7 @@
  * devolvendo vazio. A tela só serve para o usuário entender por quê.
  */
 import { cache } from "react";
+import { registrarErroServidor } from "./registrarErro";
 import { clienteServidor } from "./supabase-servidor";
 
 export interface EstadoMfa {
@@ -79,7 +80,7 @@ export const estadoMfa = cache(async (): Promise<EstadoMfa> => {
   } catch (erro) {
     // Mesmo motivo do catch em perfilAtual() (lib/dados.ts): sem log, uma
     // falha de configuração vira "sem sessão" silenciosamente.
-    console.error("estadoMfa() falhou:", erro);
+    await registrarErroServidor("estadoMfa", erro);
     return SEM_SESSAO;
   }
 });

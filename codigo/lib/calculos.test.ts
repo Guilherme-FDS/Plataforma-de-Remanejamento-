@@ -12,6 +12,7 @@
 import { describe, expect, it } from "vitest";
 import {
   estaAberto,
+  estatisticaDuracao,
   incidenciaPorSetor,
   situacaoDe,
 } from "./calculos";
@@ -108,6 +109,29 @@ describe("estaAberto()", () => {
 
   it("a_encerrar ainda conta como aberto — é o que os indicadores precisam pegar", () => {
     expect(estaAberto({ ...BASE, dataPrevistaFim: "2026-06-14" }, REF)).toBe(true);
+  });
+});
+
+describe("estatisticaDuracao()", () => {
+  function comDias(...dias: number[]) {
+    return dias.map((d, i) => ({ ...BASE, id: i, duracaoTipo: "dias" as const, duracaoDias: d }));
+  }
+
+  it("mediana com quantidade ímpar de casos — o do meio", () => {
+    expect(estatisticaDuracao(comDias(10, 20, 30)).mediana).toBe(20);
+  });
+
+  it("mediana com quantidade par — média dos dois do meio, não só o de cima", () => {
+    // Bug real: a versão antiga devolvia 30 aqui (só o de cima).
+    expect(estatisticaDuracao(comDias(10, 20, 30, 40)).mediana).toBe(25);
+  });
+
+  it("ignora permanentes no cálculo de duração", () => {
+    const itens = [
+      ...comDias(10, 20),
+      { ...BASE, id: 99, duracaoTipo: "permanente" as const, duracaoDias: null },
+    ];
+    expect(estatisticaDuracao(itens).n).toBe(2);
   });
 });
 

@@ -238,10 +238,17 @@ export function estatisticaDuracao(itens: Remanejamento[]): {
     .sort((a, b) => a - b);
   if (dias.length === 0) return { n: 0, media: 0, mediana: 0, totalDias: 0 };
   const total = dias.reduce((s, d) => s + d, 0);
+  const meio = dias.length / 2;
+  // Quantidade par de casos: mediana é a média dos dois do meio, não o de
+  // cima sozinho. `dias[Math.floor(n/2)]` (a versão antiga) pegava só o
+  // de cima e chamava de mediana — errado sempre que `n` é par.
+  const mediana = Number.isInteger(meio)
+    ? (dias[meio - 1] + dias[meio]) / 2
+    : dias[Math.floor(meio)];
   return {
     n: dias.length,
     media: Math.round(total / dias.length),
-    mediana: dias[Math.floor(dias.length / 2)],
+    mediana: Math.round(mediana),
     totalDias: total,
   };
 }

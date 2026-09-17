@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import type { ItemLista, ListasAdmin, SegmentoAdmin, SetorAdmin } from "@/lib/dados";
 import type { UsuarioAdmin } from "@/app/actions/usuarios";
+import type { ErroRegistrado } from "@/app/actions/observabilidade";
 import type { Unidade } from "@/lib/tipos";
 import {
   criarSetor, editarSetor, toggleSetor,
@@ -17,7 +18,7 @@ import UsuariosCliente from "./UsuariosCliente";
 
 type Aba =
   | "setores" | "turnos" | "supervisores" | "profissionais"
-  | "segmentos" | "regioes" | "usuarios" | "unidades";
+  | "segmentos" | "regioes" | "usuarios" | "unidades" | "erros";
 
 const ABAS: { id: Aba; rotulo: string }[] = [
   { id: "usuarios", rotulo: "Usuários" },
@@ -28,16 +29,19 @@ const ABAS: { id: Aba; rotulo: string }[] = [
   { id: "profissionais", rotulo: "Profissionais" },
   { id: "segmentos", rotulo: "Segmentos" },
   { id: "regioes", rotulo: "Regiões" },
+  { id: "erros", rotulo: "Erros" },
 ];
 
 export default function AdminCliente({
   listas,
   usuarios,
   unidades,
+  erros,
 }: {
   listas: ListasAdmin;
   usuarios: UsuarioAdmin[];
   unidades: Unidade[];
+  erros: ErroRegistrado[];
 }) {
   const [aba, setAba] = useState<Aba>("usuarios");
 
@@ -119,6 +123,55 @@ export default function AdminCliente({
           segmentos={listas.segmentos}
           regioes={listas.regioes}
         />
+      )}
+      {aba === "erros" && <ListaErros erros={erros} />}
+    </div>
+  );
+}
+
+// ─── Erros (observabilidade — migration 0015) ────────────────────────────────
+
+function ListaErros({ erros }: { erros: ErroRegistrado[] }) {
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white">
+      <div className="border-b border-slate-100 px-5 py-3">
+        <h2 className="text-sm font-semibold text-slate-900">
+          Últimos erros registrados
+        </h2>
+        <p className="mt-0.5 text-xs text-slate-500">
+          Falhas capturadas pelo próprio app (catches de servidor e tela de
+          erro do navegador). Não é log completo — é o suficiente pra
+          perceber um problema sem depender de alguém reclamar.
+        </p>
+      </div>
+
+      {erros.length === 0 ? (
+        <p className="px-5 py-6 text-sm text-slate-400">
+          Nenhum erro registrado. Bom sinal.
+        </p>
+      ) : (
+        <ul className="divide-y divide-slate-100">
+          {erros.map((e) => (
+            <li key={e.id} className="px-5 py-3">
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <span className="font-mono text-xs font-medium text-slate-700">
+                  {e.contexto}
+                </span>
+                <span className="text-xs text-slate-400">
+                  {new Date(e.ocorridoEm).toLocaleString("pt-BR")}
+                </span>
+              </div>
+              <p className="mt-1 break-words text-sm text-rose-700">{e.mensagem}</p>
+              {(e.rota || e.usuarioNome) && (
+                <p className="mt-1 text-xs text-slate-400">
+                  {e.rota && <span>{e.rota}</span>}
+                  {e.rota && e.usuarioNome && " · "}
+                  {e.usuarioNome && <span>{e.usuarioNome}</span>}
+                </p>
+              )}
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   );

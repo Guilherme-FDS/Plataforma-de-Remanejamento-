@@ -5,6 +5,7 @@
  * do Postgres é quem decide o que volta. Sem login, tudo devolve vazio.
  */
 import { cache } from "react";
+import { registrarErroServidor } from "./registrarErro";
 import { clienteServidor } from "./supabase-servidor";
 import { TODAS_UNIDADES, unidadeAtivaCookie } from "./unidade-ativa";
 import type {
@@ -503,10 +504,10 @@ export async function perfilAtual() {
   } catch (erro) {
     // Sem perfil, a navegação aparece sem o nome do usuário. As páginas de
     // dados continuam falhando alto, como devem. Mas o erro precisa ficar
-    // visível no log do servidor — engolir em silêncio faz uma falha de
-    // configuração (env var errada, projeto Supabase trocado) parecer
-    // "usuário deslogado" e atrasa o diagnóstico.
-    console.error("perfilAtual() falhou:", erro);
+    // visível — engolir em silêncio faz uma falha de configuração (env var
+    // errada, projeto Supabase trocado) parecer "usuário deslogado" e
+    // atrasa o diagnóstico, como aconteceu no incidente de 17/09.
+    await registrarErroServidor("perfilAtual", erro);
     return null;
   }
 }
