@@ -57,7 +57,12 @@ jobs:
         env:
           PGCONNECT_TIMEOUT: "30"
         run: |
-          pg_dump "${{ secrets.SUPABASE_DB_URL }}" \
+          # Caminho completo, não só "pg_dump": a imagem do runner já vem com
+          # um pg_dump 16 em /usr/bin, e ele continua na frente no PATH
+          # mesmo depois de instalar o pacote da versão 17 — descoberto
+          # testando ao vivo (dava "server version mismatch" mesmo com o
+          # pacote certo instalado).
+          /usr/lib/postgresql/17/bin/pg_dump "${{ secrets.SUPABASE_DB_URL }}" \
             --no-owner --no-privileges --format=plain \
             --file=dump.sql
 
