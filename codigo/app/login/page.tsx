@@ -6,7 +6,7 @@ export const metadata = { title: "Entrar" };
 export default function Login({
   searchParams,
 }: {
-  searchParams: { de?: string; motivo?: string };
+  searchParams: { de?: string; motivo?: string; erro?: string };
 }) {
   const destino = searchParams.de?.startsWith("/") ? searchParams.de : "/";
 
@@ -25,6 +25,13 @@ export default function Login({
       {searchParams.motivo === "inatividade" && (
         <p className="mb-4 rounded-md bg-amber-50 px-3 py-2 text-center text-sm text-amber-800 ring-1 ring-inset ring-amber-600/20">
           Sessão encerrada por 15 minutos sem uso. Entre de novo.
+        </p>
+      )}
+
+      {searchParams.erro === "link-invalido" && (
+        <p className="mb-4 rounded-md bg-rose-50 px-3 py-2 text-center text-sm text-rose-700 ring-1 ring-inset ring-rose-600/20">
+          Este link expirou ou já foi usado. Peça um novo convite ou link de
+          redefinição de senha.
         </p>
       )}
 

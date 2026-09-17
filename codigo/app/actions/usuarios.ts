@@ -8,6 +8,22 @@ import type { AlcanceUnidades, Papel } from "@/lib/tipos";
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
+/**
+ * Usada por `criarUsuario()` (convite) e `enviarLinkRedefinicao()` — as
+ * duas são chamadas de ADMIN (servidor), sem navegador nenhum iniciando o
+ * fluxo. Por isso o e-mail do Supabase manda `token_hash`, não `code`; ver
+ * o comentário completo em app/auth/callback/route.ts.
+ *
+ * PRECISA que o template "Invite user" (e "Reset Password", se
+ * `enviarLinkRedefinicao` também for usada) em Authentication → Email
+ * Templates do painel do Supabase aponte pra cá com token_hash, algo como:
+ *
+ *   {{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=invite&next=/auth/redefinir
+ *
+ * (troque `type=invite` por `type=recovery` no template de Reset Password.)
+ * Sem esse ajuste no template, o link continua vindo no formato antigo
+ * (fragmento da URL) e cai sempre em /login sem avisar.
+ */
 const REDIRECT_REDEFINIR = `${SITE_URL}/auth/callback?next=/auth/redefinir`;
 
 async function verificarAdmin() {
