@@ -1,12 +1,37 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { clienteNavegador } from "@/lib/supabase-navegador";
 import Logo from "@/components/Logo";
 
 const campo =
   "h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-gtf-600 focus:outline-none focus:ring-1 focus:ring-gtf-600";
+
+/**
+ * Define a senha de quem chegou por convite ou por "esqueci a senha".
+ *
+ * POR QUE O LINK APONTA DIRETO PRA CÁ, E NÃO PRA /auth/callback
+ *
+ * O convite é criado pelo admin, do servidor — não existe navegador
+ * nenhum iniciando o fluxo, então o Supabase manda os tokens no
+ * **fragmento** da URL (`#access_token=...`), formato antigo. Fragmento
+ * de URL nunca é enviado ao servidor: é informação que só existe dentro
+ * do navegador. Por isso uma rota de servidor (`/auth/callback`) nunca
+ * conseguiria lê-lo — ela recebia a requisição sem nada e mandava pro
+ * login, que era o bug relatado em 17/09.
+ *
+ * O cliente de navegador do Supabase já sabe ler esse fragmento sozinho
+ * (`detectSessionInUrl`, ligado por padrão). Bastava o link cair numa
+ * PÁGINA em vez de numa rota. É o que o `useEffect` abaixo aproveita:
+ * instanciar o cliente aqui faz a biblioteca varrer a URL, criar a
+ * sessão e gravar os cookies antes de a pessoa digitar qualquer coisa.
+ *
+ * Funciona igual para o formato novo (`?code=`, usado quando é o próprio
+ * navegador que pede a redefinição) — a mesma inicialização trata os dois.
+ * Nada disso exige SMTP próprio nem editar o template de e-mail.
+ */
+type EstadoSessao = "verificando" | "pronto" | "sem-sessao";
 
 export default function PaginaRedefinir() {
   const router = useRouter();
@@ -15,6 +40,38 @@ export default function PaginaRedefinir() {
   const [erro, setErro] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState(false);
   const [enviando, setEnviando] = useState(false);
+  const [estadoSessao, setEstadoSessao] = useState<EstadoSessao>("verificando");
+
+  useEffect(() => {
+    let ativo = true;
+
+    async function prepararSessao() {
+      const supabase = clienteNavegador();
+
+      // getSession() espera a inicialização do cliente, que é quando a
+      // biblioteca lê o token da URL. Sem este await, o formulário
+      // apareceria antes de a sessão existir.
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!ativo) return;
+
+      if (session) {
+        setEstadoSessao("pronto");
+        // Tira o token da barra de endereços: já foi consumido, e link com
+        // token no histórico do navegador é token vazando.
+        window.history.replaceState(null, "", window.location.pathname);
+      } else {
+        setEstadoSessao("sem-sessao");
+      }
+    }
+
+    void prepararSessao();
+    return () => {
+      ativo = false;
+    };
+  }, []);
 
   async function definir(e: React.FormEvent) {
     e.preventDefault();
@@ -60,7 +117,27 @@ export default function PaginaRedefinir() {
       </div>
 
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        {sucesso ? (
+        {estadoSessao === "verificando" ? (
+          <p className="py-2 text-center text-sm text-slate-400">
+            Conferindo o link…
+          </p>
+        ) : estadoSessao === "sem-sessao" ? (
+          <div className="space-y-3 text-center">
+            <p className="rounded-md bg-rose-50 px-4 py-3 text-sm text-rose-700 ring-1 ring-inset ring-rose-600/20">
+              Este link expirou ou já foi usado.
+            </p>
+            <p className="text-sm leading-relaxed text-slate-500">
+              Peça a um administrador para enviar um convite novo, ou use
+              &quot;Esqueci a senha&quot; na tela de entrada.
+            </p>
+            <a
+              href="/login"
+              className="inline-block text-sm font-medium text-gtf-700 hover:underline"
+            >
+              Ir para a tela de entrada
+            </a>
+          </div>
+        ) : sucesso ? (
           <p className="rounded-md bg-emerald-50 px-4 py-3 text-center text-sm text-emerald-800 ring-1 ring-inset ring-emerald-600/20">
             Senha definida com sucesso! Redirecionando…
           </p>
