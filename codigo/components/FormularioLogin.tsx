@@ -68,8 +68,12 @@ export default function FormularioLogin({ destino }: { destino: string }) {
     setEnviandoReset(true);
     setFeedbackReset(null);
     const supabase = clienteNavegador();
+    // Direto na página, não em /auth/callback: a mesma página trata tanto o
+    // formato deste fluxo (`?code=`, iniciado pelo navegador) quanto o do
+    // convite feito pelo admin (`#access_token=`). Ver o comentário no topo
+    // de app/auth/redefinir/page.tsx.
     const { error } = await supabase.auth.resetPasswordForEmail(emailReset.trim(), {
-      redirectTo: `${SITE_URL}/auth/callback?next=/auth/redefinir`,
+      redirectTo: `${SITE_URL}/auth/redefinir`,
     });
     setEnviandoReset(false);
     setFeedbackReset(
