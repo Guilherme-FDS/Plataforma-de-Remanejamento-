@@ -58,29 +58,37 @@ type Resultado = { ok: boolean; erro?: string };
 
 // ─── Setores ────────────────────────────────────────────────────────────────
 
-export async function criarSetor(nome: string): Promise<Resultado> {
+export async function criarSetor(
+  nome: string,
+  efetivo: number | null = null,
+): Promise<Resultado> {
   const { user, unidadeId, erro } = await verificarOperador();
   if (!user) return { ok: false, erro };
   const supabase = clienteServidor();
   const { error } = await supabase
     .from("setores")
-    .insert({ nome: nome.trim(), unidade_id: unidadeId });
+    .insert({ nome: nome.trim(), unidade_id: unidadeId, efetivo });
   if (error) return { ok: false, erro: error.message };
   revalidatePath("/admin");
   return { ok: true };
 }
 
-export async function editarSetor(id: number, nome: string): Promise<Resultado> {
+export async function editarSetor(
+  id: number,
+  nome: string,
+  efetivo: number | null = null,
+): Promise<Resultado> {
   const { user, erro } = await verificarOperador();
   if (!user) return { ok: false, erro };
   const supabase = clienteServidor();
   const { error } = await supabase
     .from("setores")
-    .update({ nome: nome.trim() })
+    .update({ nome: nome.trim(), efetivo })
     .eq("id", id);
   if (error) return { ok: false, erro: error.message };
   revalidatePath("/admin");
   revalidatePath("/");
+  revalidatePath("/indicadores");
   return { ok: true };
 }
 

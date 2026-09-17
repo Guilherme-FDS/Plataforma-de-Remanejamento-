@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import type { ItemLista, ListasAdmin, SegmentoAdmin } from "@/lib/dados";
+import type { ItemLista, ListasAdmin, SegmentoAdmin, SetorAdmin } from "@/lib/dados";
 import type { UsuarioAdmin } from "@/app/actions/usuarios";
 import type { Unidade } from "@/lib/tipos";
 import {
@@ -76,14 +76,7 @@ export default function AdminCliente({
       )}
 
       {aba === "setores" && (
-        <ListaSimples
-          titulo="Setores"
-          itens={listas.setores}
-          temAtivo
-          onCriar={criarSetor}
-          onEditar={editarSetor}
-          onToggle={toggleSetor}
-        />
+        <ListaSetores setores={listas.setores} />
       )}
       {aba === "turnos" && (
         <ListaSimples
@@ -260,6 +253,130 @@ function ListaSimples({
         <button
           onClick={adicionar}
           disabled={!novo.trim() || pending}
+          className="rounded-md bg-gtf-700 px-4 text-sm font-medium text-white hover:bg-gtf-800 disabled:bg-slate-300"
+        >
+          Adicionar
+        </button>
+      </div>
+
+      {erro && <p className="px-5 pb-3 text-xs text-rose-600">{erro}</p>}
+    </div>
+  );
+}
+
+// ─── Setores (têm efetivo como campo extra — habilita incidência/100) ───────
+
+function ListaSetores({ setores }: { setores: SetorAdmin[] }) {
+  const [novoNome, setNovoNome] = useState("");
+  const [novoEfetivo, setNovoEfetivo] = useState("");
+  const [editandoId, setEditandoId] = useState<number | null>(null);
+  const [editandoNome, setEditandoNome] = useState("");
+  const [editandoEfetivo, setEditandoEfetivo] = useState("");
+  const [erro, setErro] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  function paraNumeroOuNulo(texto: string): number | null {
+    const n = Number(texto);
+    return texto.trim() !== "" && Number.isFinite(n) && n >= 0 ? n : null;
+  }
+
+  function iniciarEdicao(s: SetorAdmin) {
+    setEditandoId(s.id);
+    setEditandoNome(s.nome);
+    setEditandoEfetivo(s.efetivo?.toString() ?? "");
+    setErro(null);
+  }
+
+  function salvarEdicao() {
+    if (!editandoId || !editandoNome.trim()) return;
+    setErro(null);
+    startTransition(async () => {
+      const res = await editarSetor(editandoId, editandoNome, paraNumeroOuNulo(editandoEfetivo));
+      if (res.ok) { setEditandoId(null); } else { setErro(res.erro ?? "Erro."); }
+    });
+  }
+
+  function adicionar() {
+    if (!novoNome.trim()) return;
+    setErro(null);
+    startTransition(async () => {
+      const res = await criarSetor(novoNome, paraNumeroOuNulo(novoEfetivo));
+      if (res.ok) { setNovoNome(""); setNovoEfetivo(""); } else { setErro(res.erro ?? "Erro."); }
+    });
+  }
+
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white">
+      <div className="border-b border-slate-100 px-5 py-3">
+        <h2 className="text-sm font-semibold text-slate-900">Setores</h2>
+        <p className="mt-0.5 text-xs text-slate-500">
+          O efetivo é o que transforma contagem de caso em incidência por 100
+          colaboradores nos Indicadores. Pode ficar em branco e ser
+          preenchido depois.
+        </p>
+      </div>
+
+      <ul className="divide-y divide-slate-100">
+        {setores.map((s) => (
+          <li key={s.id} className="flex items-center gap-3 px-5 py-2.5">
+            {editandoId === s.id ? (
+              <>
+                <input
+                  value={editandoNome}
+                  onChange={(e) => setEditandoNome(e.target.value)}
+                  className="h-8 flex-1 rounded border border-slate-300 px-2 text-sm focus:border-gtf-600 focus:outline-none"
+                  autoFocus
+                />
+                <input
+                  value={editandoEfetivo}
+                  onChange={(e) => setEditandoEfetivo(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && salvarEdicao()}
+                  inputMode="numeric"
+                  placeholder="Efetivo"
+                  className="h-8 w-24 rounded border border-slate-300 px-2 text-sm focus:border-gtf-600 focus:outline-none"
+                />
+                <button onClick={salvarEdicao} disabled={pending} className="text-xs font-medium text-gtf-700 hover:underline disabled:opacity-50">Salvar</button>
+                <button onClick={() => setEditandoId(null)} className="text-xs text-slate-400 hover:text-slate-700">Cancelar</button>
+              </>
+            ) : (
+              <>
+                <span className={`flex-1 text-sm ${!s.ativo ? "text-slate-400 line-through" : "text-slate-800"}`}>
+                  {s.nome}
+                </span>
+                <span className="text-xs tabular-nums text-slate-400">
+                  {s.efetivo !== null ? `${s.efetivo} colab.` : "sem efetivo"}
+                </span>
+                <button onClick={() => iniciarEdicao(s)} className="text-xs text-slate-400 hover:text-slate-700">Editar</button>
+                <button
+                  onClick={() => startTransition(() => toggleSetor(s.id, !s.ativo).then())}
+                  className={`text-xs ${s.ativo ? "text-slate-400 hover:text-rose-600" : "text-emerald-600 hover:underline"}`}
+                >
+                  {s.ativo ? "Desativar" : "Reativar"}
+                </button>
+              </>
+            )}
+          </li>
+        ))}
+      </ul>
+
+      <div className="flex flex-wrap gap-2 border-t border-slate-100 px-5 py-3">
+        <input
+          value={novoNome}
+          onChange={(e) => setNovoNome(e.target.value)}
+          placeholder="Novo setor…"
+          className="h-9 flex-1 min-w-32 rounded-md border border-slate-300 px-3 text-sm focus:border-gtf-600 focus:outline-none"
+        />
+        <input
+          value={novoEfetivo}
+          onChange={(e) => setNovoEfetivo(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && adicionar()}
+          inputMode="numeric"
+          placeholder="Efetivo (opcional)"
+          className="h-9 w-36 rounded-md border border-slate-300 px-3 text-sm focus:border-gtf-600 focus:outline-none"
+        />
+        <button
+          onClick={adicionar}
+          disabled={!novoNome.trim() || pending}
           className="rounded-md bg-gtf-700 px-4 text-sm font-medium text-white hover:bg-gtf-800 disabled:bg-slate-300"
         >
           Adicionar

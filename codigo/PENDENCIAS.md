@@ -1,7 +1,13 @@
 # Pendências e melhorias
 
-Estado em 13/09/2026. Três seções: **o que falta sobre as pessoas** (dado),
-**o que falta no sistema** (funcionalidade) e **o que precisa de decisão sua**.
+Estado em 13/09/2026, com retoques em 17/09/2026 (marcados abaixo). Três
+seções: **o que falta sobre as pessoas** (dado), **o que falta no sistema**
+(funcionalidade) e **o que precisa de decisão sua**.
+
+> Este arquivo cobre o levantamento original de 13/09. A partir de 16/09 as
+> novas pendências (segurança, comercial) passaram a ficar em
+> `documentação/02-Solicitações por Data/`, com uma entrada por dia — é lá
+> que está o estado mais atual.
 
 ---
 
@@ -90,9 +96,11 @@ Se forem a mesma pessoa, a contagem por supervisor está dividida em dois.
 
 Em ordem de impacto:
 
-### 3.1 Gravar o lançamento
-O formulário valida, normaliza e calcula a previsão — mas ainda mostra o
-registro em vez de gravar. É o pilar "lançar mais rápido" pela metade.
+### 3.1 Gravar o lançamento — **resolvido, confirmado em 17/09**
+`salvarRemanejamento()` (`app/actions/remanejamentos.ts`) já faz o insert
+completo, com a lógica de reaproveitar colaborador sem matrícula que entrou
+na rodada de 16/09. Este item estava desatualizado — já não descrevia o
+sistema atual.
 
 ### 3.2 Encerrar caso pela tela
 `data_encerramento` existe no banco e a situação `a_encerrar` já aponta quem
@@ -123,22 +131,18 @@ semanal com "vence nos próximos 15 dias" fecharia o ciclo.
 
 ## 4. O que depende de decisão sua
 
-### 4.1 Efetivo por setor — o mais importante
+### 4.1 Efetivo por setor — **ligado em 17/09**
 
-A coluna `setores.efetivo` existe e está vazia. Sem ela, o painel mostra
-"Evisceração: 15 casos" — número que não diz se Evisceração está pior ou só
-é maior.
-
-Com o efetivo, isso vira **incidência por 100 colaboradores**, que é o único
-indicador da lista que aponta onde agir.
+A coluna `setores.efetivo` agora é editável em `/admin` → aba Setores, e
+`/indicadores` mostra o card "Incidência por 100 colaboradores" assim que
+houver efetivo cadastrado. Falta só preencher o número de cada setor —
+pode ser aproximado e atualizado de vez em quando, pela própria tela:
 
 ```sql
 update setores set efetivo = 400 where nome = 'Evisceração';
 update setores set efetivo = 120 where nome = 'Cone';
--- etc.
+-- etc. — ou pela tela em /admin, sem precisar de SQL
 ```
-
-Pode ser aproximado e atualizado de vez em quando.
 
 ### 4.2 A inversão clínico × ocupacional
 
@@ -169,11 +173,18 @@ exige mascaramento por perfil, que hoje não existe porque não era necessário.
 
 ## 5. Riscos conhecidos
 
-- **Sem testes automatizados.** A regra de situação existe em dois lugares
-  (`situacaoDe()` no TypeScript e `situacao_remanejamento()` no Postgres) e
-  as duas precisam concordar. Hoje nada verifica isso.
-- **Sem backup configurado.** O plano free do Supabase tem retenção curta.
-- **Sem MFA.** Login por senha apenas, para dado de saúde.
+- ~~Sem testes automatizados~~ — **resolvido em 17/09**: `lib/calculos.test.ts`
+  (Vitest, `npm test`) cobre `situacaoDe()` e `incidenciaPorSetor()`,
+  comentado ramo a ramo com o `situacao_remanejamento()` equivalente no
+  Postgres. A paridade entre TS e SQL continua manual (sem banco neste
+  ambiente para rodar os dois lados juntos).
+- **Sem backup configurado no Supabase** (plano free, retenção curta) —
+  coberto por fora: `.github/workflows/backup-banco.yml` faz `pg_dump`
+  diário criptografado. Precisa dos secrets `SUPABASE_DB_URL` e
+  `BACKUP_GPG_PASSPHRASE` configurados no GitHub para começar a rodar.
+- ~~Sem MFA~~ — **resolvido em 16/09**, ver `documentação/02-Solicitações
+  por Data/2026-09-16.md` e `2026-09-17.md` (diagnóstico de um incidente
+  de adoção).
 - **A `anon key` é pública** e está no bundle do app. Isso é por design; o
   que protege é a RLS. Qualquer tabela nova precisa de `enable row level
   security` **e** policy — esquecer uma das duas abre o banco.

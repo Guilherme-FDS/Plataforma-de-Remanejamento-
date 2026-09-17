@@ -287,6 +287,47 @@ export function reincidencias(itens: Remanejamento[]): Reincidencia[] {
   return saida.sort((a, b) => b.eventos.length - a.eventos.length);
 }
 
+export interface IncidenciaSetor {
+  setor: string;
+  casos: number;
+  efetivo: number | null;
+  /** Casos por 100 colaboradores do setor. null quando o efetivo não foi informado. */
+  taxa: number | null;
+}
+
+/**
+ * "Evisceração: 15 casos" não diz se o setor está pior ou só é maior. Com o
+ * efetivo (cadastrado em Configurações → Setores), vira taxa comparável
+ * entre setores de tamanhos diferentes.
+ *
+ * Setor sem efetivo aparece com `taxa: null` — a tela mostra "sem efetivo"
+ * em vez de inventar um número.
+ */
+export function incidenciaPorSetor(
+  itens: Remanejamento[],
+  efetivoPorSetor: Record<string, number | null>,
+): IncidenciaSetor[] {
+  const contagem = new Map<string, number>();
+  for (const r of itens) {
+    if (!r.setor) continue;
+    contagem.set(r.setor, (contagem.get(r.setor) ?? 0) + 1);
+  }
+
+  return [...contagem.entries()]
+    .map(([setor, casos]) => {
+      const efetivo = efetivoPorSetor[setor] ?? null;
+      const taxa = efetivo && efetivo > 0 ? (casos / efetivo) * 100 : null;
+      return { setor, casos, efetivo, taxa };
+    })
+    .sort((a, b) => {
+      // Com taxa: maior primeiro. Sem taxa: depois, por contagem.
+      if (a.taxa !== null && b.taxa !== null) return b.taxa - a.taxa;
+      if (a.taxa !== null) return -1;
+      if (b.taxa !== null) return 1;
+      return b.casos - a.casos;
+    });
+}
+
 export interface Cluster {
   setor: string;
   regiao: string;

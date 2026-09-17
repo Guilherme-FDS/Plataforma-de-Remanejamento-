@@ -376,8 +376,13 @@ export interface SegmentoAdmin extends ItemLista {
   regiaoId: number;
 }
 
+/** `efetivo` habilita incidência por 100 colaboradores nos indicadores. */
+export interface SetorAdmin extends ItemLista {
+  efetivo: number | null;
+}
+
 export interface ListasAdmin {
-  setores: ItemLista[];
+  setores: SetorAdmin[];
   turnos: ItemLista[];
   supervisores: ItemLista[];
   profissionais: ItemLista[];
@@ -394,7 +399,7 @@ export const obterListasAdmin = cache(async (): Promise<ListasAdmin> => {
     await Promise.all([
       supabase
         .from("setores")
-        .select("id, nome, ativo")
+        .select("id, nome, ativo, efetivo")
         .match(naUnidade)
         .order("nome"),
       supabase.from("turnos").select("id, nome").match(naUnidade).order("nome"),
@@ -439,8 +444,18 @@ export const obterListasAdmin = cache(async (): Promise<ListasAdmin> => {
     };
   });
 
+  const setoresComEfetivo: SetorAdmin[] = (setores.data ?? []).map((s) => {
+    const linha = s as unknown as {
+      id: number;
+      nome: string;
+      ativo: boolean;
+      efetivo: number | null;
+    };
+    return { id: linha.id, nome: linha.nome, ativo: linha.ativo, efetivo: linha.efetivo };
+  });
+
   return {
-    setores: mapItem(setores),
+    setores: setoresComEfetivo,
     turnos: mapItem(turnos),
     supervisores: mapItem(supervisores),
     profissionais: mapItem(profissionais),
@@ -485,9 +500,13 @@ export async function perfilAtual() {
           email: user.email ?? "",
         }
       : null;
-  } catch {
+  } catch (erro) {
     // Sem perfil, a navegação aparece sem o nome do usuário. As páginas de
-    // dados continuam falhando alto, como devem.
+    // dados continuam falhando alto, como devem. Mas o erro precisa ficar
+    // visível no log do servidor — engolir em silêncio faz uma falha de
+    // configuração (env var errada, projeto Supabase trocado) parecer
+    // "usuário deslogado" e atrasa o diagnóstico.
+    console.error("perfilAtual() falhou:", erro);
     return null;
   }
 }

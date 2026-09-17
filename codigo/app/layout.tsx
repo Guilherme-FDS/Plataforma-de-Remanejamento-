@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
 import BloqueioMfa from "@/components/BloqueioMfa";
+import InatividadeLogout from "@/components/InatividadeLogout";
 import Nav from "@/components/Nav";
 import ServiceWorker from "@/components/ServiceWorker";
 import {
@@ -83,6 +84,7 @@ export default async function RootLayout({
     <html lang="pt-BR">
       <body className="min-h-[100dvh] bg-slate-50 antialiased">
         <ServiceWorker />
+        {perfil && <InatividadeLogout />}
         <Nav
           usuario={perfil?.nome ?? null}
           perfil={

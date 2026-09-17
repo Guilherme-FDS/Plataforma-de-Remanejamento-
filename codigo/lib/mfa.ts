@@ -76,7 +76,10 @@ export const estadoMfa = cache(async (): Promise<EstadoMfa> => {
       precisaCadastrar,
       bloqueado: precisaConfirmar || precisaCadastrar,
     };
-  } catch {
+  } catch (erro) {
+    // Mesmo motivo do catch em perfilAtual() (lib/dados.ts): sem log, uma
+    // falha de configuração vira "sem sessão" silenciosamente.
+    console.error("estadoMfa() falhou:", erro);
     return SEM_SESSAO;
   }
 });

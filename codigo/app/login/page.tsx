@@ -6,7 +6,7 @@ export const metadata = { title: "Entrar" };
 export default function Login({
   searchParams,
 }: {
-  searchParams: { de?: string };
+  searchParams: { de?: string; motivo?: string };
 }) {
   const destino = searchParams.de?.startsWith("/") ? searchParams.de : "/";
 
@@ -21,6 +21,12 @@ export default function Login({
           Medicina Ocupacional e Ergonomia · Maringá
         </p>
       </div>
+
+      {searchParams.motivo === "inatividade" && (
+        <p className="mb-4 rounded-md bg-amber-50 px-3 py-2 text-center text-sm text-amber-800 ring-1 ring-inset ring-amber-600/20">
+          Sessão encerrada por 15 minutos sem uso. Entre de novo.
+        </p>
+      )}
 
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <FormularioLogin destino={destino} />
