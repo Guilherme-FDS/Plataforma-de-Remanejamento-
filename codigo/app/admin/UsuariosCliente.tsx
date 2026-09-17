@@ -3,7 +3,8 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Modal } from "@/components/ui";
-import type { UsuarioAdmin } from "@/app/actions/usuarios";
+import LinkConvite from "@/components/LinkConvite";
+import type { ResultadoCriacao, UsuarioAdmin } from "@/app/actions/usuarios";
 import type { AlcanceUnidades, Papel, Unidade } from "@/lib/tipos";
 import {
   criarUsuario,
@@ -55,6 +56,13 @@ export default function UsuariosCliente({
   const [criando, setCriando] = useState(false);
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [detalheId, setDetalheId] = useState<string | null>(null);
+  // Link de definição de senha do último usuário criado / último reenvio.
+  // Fica visível até o admin fechar, para dar tempo de copiar.
+  const [convite, setConvite] = useState<{
+    link: string;
+    emailEnviado: boolean;
+    nome: string;
+  } | null>(null);
 
   function atualizarPagina() {
     router.refresh();
@@ -85,11 +93,42 @@ export default function UsuariosCliente({
           unidades={unidades}
           onSalvar={async (dados) => {
             const res = await criarUsuario(dados);
-            if (res.ok) { setCriando(false); atualizarPagina(); }
+            if (res.ok) {
+              setCriando(false);
+              if (res.link) {
+                setConvite({
+                  link: res.link,
+                  emailEnviado: res.emailEnviado ?? true,
+                  nome: dados.nome,
+                });
+              }
+              atualizarPagina();
+            }
             return res;
           }}
           onCancelar={() => setCriando(false)}
         />
+      )}
+
+      {/* Link para repassar por outro canal — some quando o admin fecha */}
+      {convite && (
+        <div className="space-y-2">
+          <div className="flex items-baseline justify-between gap-3">
+            <p className="text-sm font-medium text-slate-700">
+              Link de acesso · {convite.nome}
+            </p>
+            <button
+              onClick={() => setConvite(null)}
+              className="text-xs text-slate-400 hover:text-slate-700"
+            >
+              Fechar
+            </button>
+          </div>
+          <LinkConvite
+            link={convite.link}
+            emailEnviado={convite.emailEnviado}
+          />
+        </div>
       )}
 
       {/* Lista */}
@@ -125,6 +164,13 @@ export default function UsuariosCliente({
               }}
               onEnviarLink={async () => {
                 const res = await enviarLinkRedefinicao(u.email);
+                if (res.ok && res.link) {
+                  setConvite({
+                    link: res.link,
+                    emailEnviado: res.emailEnviado ?? true,
+                    nome: u.nome,
+                  });
+                }
                 return res;
               }}
             />
@@ -209,7 +255,7 @@ function LinhaUsuario({
   onVerDetalhe: () => void;
   onEditar: () => void;
   onToggle: () => Promise<void>;
-  onEnviarLink: () => Promise<{ ok: boolean; erro?: string }>;
+  onEnviarLink: () => Promise<ResultadoCriacao>;
 }) {
   const [pending, startTransition] = useTransition();
   const [feedback, setFeedback] = useState<string | null>(null);
