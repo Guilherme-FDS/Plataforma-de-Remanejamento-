@@ -34,6 +34,14 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ vars.BACKUP_ATIVO != 'false' }}
     steps:
+      # Sem isto o diretório de trabalho não é um repositório git — os
+      # comandos git do último passo (fetch/checkout/commit na branch
+      # `backups`) falhavam com "fatal: not in a git directory". Faltava
+      # desde o início; só apareceu agora porque é o primeiro run que passou
+      # dos passos anteriores.
+      - name: Baixa o repositório
+        uses: actions/checkout@v4
+
       # O runner do Ubuntu só tem o pg_dump 16 nos repositórios padrão, e o
       # Supabase já roda Postgres 17 — pg_dump recusa dumpar servidor mais
       # novo que ele mesmo. O script oficial do PGDG (PostgreSQL Global
