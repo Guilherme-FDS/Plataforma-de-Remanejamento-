@@ -123,9 +123,14 @@ Criar um novo membro da equipe hoje exige `insert into perfis` no SQL Editor.
 ### 3.7 Gerir as listas
 Setor, supervisor, profissional e segmento só mudam por SQL.
 
-### 3.8 Notificar vencimento
+### 3.8 Notificar vencimento — **decisão pendente, adiado em 17/09**
 O painel mostra o que vence, mas ninguém é avisado. Um e-mail ou push
 semanal com "vence nos próximos 15 dias" fecharia o ciclo.
+
+Discutido em 17/09 e conscientemente deixado de fora dessa rodada: falta
+decidir o provedor antes de construir — e-mail (Resend, ou SMTP da GTF) ou
+push do PWA (precisa de VAPID keys). Nenhuma das duas opção tem custo
+relevante, é só escolha.
 
 ---
 
@@ -185,6 +190,18 @@ exige mascaramento por perfil, que hoje não existe porque não era necessário.
 - ~~Sem MFA~~ — **resolvido em 16/09**, ver `documentação/02-Solicitações
   por Data/2026-09-16.md` e `2026-09-17.md` (diagnóstico de um incidente
   de adoção).
+- ~~Sem headers de segurança~~ — **resolvido em 17/09**: CSP (com nonce),
+  `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`,
+  `Permissions-Policy` em `middleware.ts`; `poweredByHeader: false` em
+  `next.config.js`.
+- ~~Sem observabilidade~~ — **atenuado em 17/09**: tabela
+  `erros_aplicacao` (migration `0015`) + aba "Erros" em `/admin`. Não é
+  Sentry — não agrega, não alerta — mas tira a dependência de alguém
+  reclamar pra um problema aparecer.
 - **A `anon key` é pública** e está no bundle do app. Isso é por design; o
   que protege é a RLS. Qualquer tabela nova precisa de `enable row level
   security` **e** policy — esquecer uma das duas abre o banco.
+- **Next 14.2.15 tem CVE conhecida** (avisado pelo `npm install`) — vale
+  planejar upgrade. Não atacado ainda.
+- **Sem rate limit** em tentativas de senha e código MFA. Avaliado em
+  17/09, adiado por decisão do usuário.
