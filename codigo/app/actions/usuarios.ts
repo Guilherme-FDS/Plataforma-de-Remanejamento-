@@ -121,6 +121,57 @@ export async function listarUsuarios(): Promise<UsuarioAdmin[]> {
   });
 }
 
+export interface ResultadoCriacao {
+  ok: boolean;
+  erro?: string;
+  /**
+   * Link para a pessoa definir a senha, para o admin repassar por outro
+   * canal (WhatsApp, e-mail corporativo). Vem junto do convite por e-mail,
+   * não no lugar dele — é uma segunda via, útil quando o e-mail demora,
+   * cai no spam ou esbarra no limite de envio do Supabase.
+   */
+  link?: string | null;
+  /** false = o e-mail não saiu (limite de envio); o link vira o único caminho. */
+  emailEnviado?: boolean;
+}
+
+/**
+ * O GoTrue não expõe um código de erro estável para "limite de e-mail
+ * estourado", só a mensagem. Reconhecer pela mensagem é frágil, então o
+ * fail-safe é o contrário do usual: na dúvida, NÃO trata como problema de
+ * e-mail e devolve o erro original ao admin, em vez de criar um usuário
+ * que ele não esperava.
+ */
+function ehErroDeEnvioDeEmail(mensagem: string | undefined): boolean {
+  if (!mensagem) return false;
+  return /rate limit|email rate|sending email|smtp|failed to send/i.test(mensagem);
+}
+
+/**
+ * Link de definição de senha, gerado SEM disparar e-mail nenhum
+ * (`generateLink` só devolve o endereço; quem envia é quem chamou).
+ *
+ * Usa `recovery` e não `invite` de propósito: `invite` recusa quando o
+ * usuário já existe, e neste ponto ele acabou de ser criado. Os dois caem
+ * na mesma tela `/auth/redefinir`.
+ *
+ * Nunca lança: o link é um extra: se falhar, o convite por e-mail já foi.
+ */
+async function gerarLinkDefinicaoSenha(email: string): Promise<string | null> {
+  try {
+    const admin = clienteAdmin();
+    const { data, error } = await admin.auth.admin.generateLink({
+      type: "recovery",
+      email,
+      options: { redirectTo: REDIRECT_REDEFINIR },
+    });
+    if (error) return null;
+    return data.properties?.action_link ?? null;
+  } catch {
+    return null;
+  }
+}
+
 async function gravarUnidadesExtra(
   perfilId: string,
   alcanceUnidades: AlcanceUnidades,
@@ -147,24 +198,55 @@ export async function criarUsuario(dados: {
   unidadeId: number;
   alcanceUnidades: AlcanceUnidades;
   unidadesExtras: number[];
-}): Promise<{ ok: boolean; erro?: string }> {
+}): Promise<ResultadoCriacao> {
   const check = await verificarAdmin();
   if (!check.ok) return { ok: false, erro: check.erro };
 
   const admin = clienteAdmin();
+  const email = dados.email.trim().toLowerCase();
 
-  // Cria o usuário e envia convite por e-mail automaticamente
-  const { data, error } = await admin.auth.admin.inviteUserByEmail(
-    dados.email.trim().toLowerCase(),
-    { redirectTo: REDIRECT_REDEFINIR },
-  );
+  // Caminho principal, inalterado: cria o usuário e o Supabase dispara o
+  // e-mail de convite.
+  const { data, error } = await admin.auth.admin.inviteUserByEmail(email, {
+    redirectTo: REDIRECT_REDEFINIR,
+  });
 
-  if (error || !data.user)
-    return { ok: false, erro: error?.message ?? "Falha ao criar usuário." };
+  let usuario = data?.user ?? null;
+  let emailEnviado = true;
+
+  if (error || !usuario) {
+    /*
+     * O serviço de e-mail padrão do Supabase é limitado a poucos envios por
+     * hora. Quando ele recusa, `inviteUserByEmail` falha inteira e o usuário
+     * NÃO chega a ser criado — o admin fica travado sem conseguir cadastrar
+     * ninguém por causa de um limite de e-mail.
+     *
+     * Aqui o cadastro deixa de depender do e-mail: cria o usuário direto e
+     * devolve o link para o admin repassar por outro canal (WhatsApp,
+     * e-mail corporativo). `email_confirm` já vem verdadeiro porque quem
+     * cadastrou foi um administrador, que responde pelo endereço.
+     */
+    if (!ehErroDeEnvioDeEmail(error?.message)) {
+      return { ok: false, erro: error?.message ?? "Falha ao criar usuário." };
+    }
+
+    const { data: criado, error: erroCriacao } =
+      await admin.auth.admin.createUser({ email, email_confirm: true });
+
+    if (erroCriacao || !criado.user) {
+      return {
+        ok: false,
+        erro: erroCriacao?.message ?? "Falha ao criar usuário.",
+      };
+    }
+
+    usuario = criado.user;
+    emailEnviado = false;
+  }
 
   const supabase = clienteServidor();
   const { error: erroP } = await supabase.from("perfis").insert({
-    id: data.user.id,
+    id: usuario.id,
     nome: dados.nome.trim(),
     funcao: dados.funcao,
     papel: dados.papel,
@@ -175,14 +257,14 @@ export async function criarUsuario(dados: {
 
   if (erroP) {
     // Desfaz a criação do usuário no auth se o perfil falhou
-    await admin.auth.admin.deleteUser(data.user.id);
+    await admin.auth.admin.deleteUser(usuario.id);
     return { ok: false, erro: erroP.message };
   }
 
-  await gravarUnidadesExtra(data.user.id, dados.alcanceUnidades, dados.unidadesExtras);
+  await gravarUnidadesExtra(usuario.id, dados.alcanceUnidades, dados.unidadesExtras);
 
   revalidatePath("/admin");
-  return { ok: true };
+  return { ok: true, link: await gerarLinkDefinicaoSenha(email), emailEnviado };
 }
 
 export async function editarUsuario(
@@ -241,7 +323,7 @@ export async function toggleUsuario(
 
 export async function enviarLinkRedefinicao(
   email: string,
-): Promise<{ ok: boolean; erro?: string }> {
+): Promise<ResultadoCriacao> {
   const check = await verificarAdmin();
   if (!check.ok) return { ok: false, erro: check.erro };
 
@@ -250,6 +332,18 @@ export async function enviarLinkRedefinicao(
     redirectTo: REDIRECT_REDEFINIR,
   });
 
-  if (error) return { ok: false, erro: error.message };
-  return { ok: true };
+  // Mesma ideia de `criarUsuario()`: o e-mail continua sendo o caminho
+  // principal, mas o link volta junto para o admin ter uma segunda via —
+  // e, se o e-mail esbarrou no limite de envio, continua sendo possível
+  // desbloquear a pessoa pelo WhatsApp em vez de esperar a cota virar.
+  const link = await gerarLinkDefinicaoSenha(email);
+
+  if (error) {
+    if (!ehErroDeEnvioDeEmail(error.message) || !link) {
+      return { ok: false, erro: error.message };
+    }
+    return { ok: true, link, emailEnviado: false };
+  }
+
+  return { ok: true, link, emailEnviado: true };
 }
