@@ -184,8 +184,11 @@ export default function GestaoMfa({ obrigatorio }: { obrigatorio: boolean }) {
             <ol className="space-y-1.5 text-sm text-slate-600">
               <li>
                 <strong className="font-medium text-slate-900">1.</strong>{" "}
-                Instale um aplicativo autenticador no celular — Google
-                Authenticator, Microsoft Authenticator ou similar.
+                Use um aplicativo autenticador — Google Authenticator,
+                Microsoft Authenticator ou similar. O gerenciador de senhas
+                do próprio celular também serve: no iPhone, Ajustes →
+                Senhas → esta conta → &quot;Configurar Código de
+                Verificação&quot; → &quot;Ler Código QR&quot;.
               </li>
               <li>
                 <strong className="font-medium text-slate-900">2.</strong>{" "}
