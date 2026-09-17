@@ -126,6 +126,16 @@ export default function GestaoMfa({ obrigatorio }: { obrigatorio: boolean }) {
   }
 
   async function remover(id: string) {
+    // Um clique acidental aqui apaga a única proteção da conta — foi
+    // exatamente assim que a verificação em duas etapas parou de funcionar
+    // numa conta real, sem que ninguém tivesse religado depois.
+    const confirmado = window.confirm(
+      ativos.length <= 1
+        ? "Remover o autenticador tira a verificação em duas etapas desta conta. Se a plataforma exigir o segundo fator, você fica sem acesso ao dado clínico até cadastrar outro. Confirma?"
+        : "Remover este autenticador?",
+    );
+    if (!confirmado) return;
+
     setErro(null);
     setOk(null);
     setOcupado(true);
