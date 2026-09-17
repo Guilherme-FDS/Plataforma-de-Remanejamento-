@@ -26,6 +26,10 @@ export default function PaginaRedefinir() {
       setErro("A senha deve ter pelo menos 8 caracteres.");
       return;
     }
+    if (!/[a-zA-Z]/.test(senha) || !/[0-9]/.test(senha)) {
+      setErro("A senha precisa ter letras e números.");
+      return;
+    }
     setErro(null);
     setEnviando(true);
     const supabase = clienteNavegador();
@@ -80,7 +84,9 @@ export default function PaginaRedefinir() {
                 className={campo}
                 autoFocus
               />
-              <p className="mt-1 text-xs text-slate-400">Mínimo 8 caracteres.</p>
+              <p className="mt-1 text-xs text-slate-400">
+                Mínimo 8 caracteres, com letras e números.
+              </p>
             </div>
 
             <div>

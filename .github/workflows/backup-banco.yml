@@ -1,0 +1,83 @@
+name: Backup do banco
+
+# Alternativa ao backup automático do plano Pro do Supabase, sem trocar de
+# plano: todo dia, faz pg_dump do banco, criptografa e guarda numa branch
+# órfã deste repositório (histórico de commits = histórico de backups).
+#
+# CONFIGURAÇÃO NECESSÁRIA (uma vez só, feita por quem administra o repo —
+# GitHub → Settings → Secrets and variables → Actions):
+#
+#   SUPABASE_DB_URL         Connection string do Postgres (Supabase →
+#                            Project Settings → Database → Connection
+#                            string → "URI", modo "Session pooler" ou
+#                            direto). Contém a senha do banco — é secreto.
+#   BACKUP_GPG_PASSPHRASE    Senha para criptografar o dump antes de
+#                            commitar. Guarde num cofre de senhas: sem ela
+#                            o backup não se restaura.
+#
+# RESTAURAR:
+#   git fetch origin backups
+#   git show origin/backups:dumps/2026-09-17.sql.gpg > dump.sql.gpg
+#   gpg --batch --passphrase "$BACKUP_GPG_PASSPHRASE" --decrypt dump.sql.gpg > dump.sql
+#   psql "$SUPABASE_DB_URL" < dump.sql
+
+on:
+  schedule:
+    - cron: "0 6 * * *" # 03:00 America/Sao_Paulo (UTC-3), fora do horário de uso
+  workflow_dispatch: {} # permite rodar manualmente em Actions → Backup do banco → Run workflow
+
+permissions:
+  contents: write
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    if: ${{ vars.BACKUP_ATIVO != 'false' }}
+    steps:
+      - name: Instala cliente do Postgres
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client gnupg
+
+      - name: Confere se os segredos estão configurados
+        run: |
+          if [ -z "${{ secrets.SUPABASE_DB_URL }}" ] || [ -z "${{ secrets.BACKUP_GPG_PASSPHRASE }}" ]; then
+            echo "::error::Faltam os secrets SUPABASE_DB_URL e/ou BACKUP_GPG_PASSPHRASE em Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+
+      - name: pg_dump
+        env:
+          PGCONNECT_TIMEOUT: "30"
+        run: |
+          pg_dump "${{ secrets.SUPABASE_DB_URL }}" \
+            --no-owner --no-privileges --format=plain \
+            --file=dump.sql
+
+      - name: Criptografa
+        run: |
+          gpg --batch --yes --symmetric --cipher-algo AES256 \
+            --passphrase "${{ secrets.BACKUP_GPG_PASSPHRASE }}" \
+            --output dump.sql.gpg dump.sql
+          rm -f dump.sql
+
+      - name: Commita na branch órfã `backups`
+        run: |
+          git config user.name "backup-bot"
+          git config user.email "backup-bot@users.noreply.github.com"
+
+          git fetch origin backups 2>/dev/null && git checkout backups || git checkout --orphan backups
+          git reset --hard 2>/dev/null || true
+
+          mkdir -p dumps
+          mv dump.sql.gpg "dumps/$(date -u +%F).sql.gpg"
+
+          # Mantém só os últimos 30 dumps — backup diário indefinido faria o
+          # repositório crescer sem limite.
+          cd dumps && ls -1 | sort | head -n -30 | xargs -r rm -- ; cd ..
+
+          git add dumps
+          if git diff --cached --quiet; then
+            echo "Nada novo para commitar."
+          else
+            git commit -m "Backup $(date -u +%F)"
+            git push origin backups
+          fi

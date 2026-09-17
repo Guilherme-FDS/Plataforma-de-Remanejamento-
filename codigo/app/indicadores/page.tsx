@@ -6,10 +6,11 @@ import {
   anosDisponiveis,
   contarPor,
   estatisticaDuracao,
+  incidenciaPorSetor,
   porMes,
   reincidencias,
 } from "@/lib/calculos";
-import { listarRemanejamentos } from "@/lib/dados";
+import { listarRemanejamentos, obterListasAdmin } from "@/lib/dados";
 import type { Remanejamento } from "@/lib/tipos";
 
 export default async function Indicadores({
@@ -17,7 +18,13 @@ export default async function Indicadores({
 }: {
   searchParams: { ano?: string };
 }) {
-  const todos = await listarRemanejamentos();
+  const [todos, listas] = await Promise.all([
+    listarRemanejamentos(),
+    obterListasAdmin(),
+  ]);
+  const efetivoPorSetor = Object.fromEntries(
+    listas.setores.map((s) => [s.nome, s.efetivo]),
+  );
   const anos = anosDisponiveis(todos);
   const ano = Number(searchParams.ano) || anos[0];
   const anterior = ano - 1;
@@ -130,6 +137,14 @@ export default async function Indicadores({
         </Cartao>
       </div>
 
+      <Cartao
+        className="mt-6"
+        titulo="Incidência por 100 colaboradores"
+        descricao="Só compara setores de tamanhos diferentes de verdade. Setor sem efetivo cadastrado (Config. → Setores) some da conta, não some da lista."
+      >
+        <IncidenciaSetores itens={doAno} efetivoPorSetor={efetivoPorSetor} ano={ano} />
+      </Cartao>
+
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
         <Cartao titulo="Tipo">
           <Barras
@@ -199,6 +214,52 @@ export default async function Indicadores({
         )}
       </Cartao>
     </>
+  );
+}
+
+function IncidenciaSetores({
+  itens,
+  efetivoPorSetor,
+  ano,
+}: {
+  itens: Remanejamento[];
+  efetivoPorSetor: Record<string, number | null>;
+  ano: number;
+}) {
+  const linhas = incidenciaPorSetor(itens, efetivoPorSetor);
+
+  if (linhas.length === 0) {
+    return <Vazio>Sem casos em {ano}.</Vazio>;
+  }
+
+  return (
+    <ul className="divide-y divide-slate-50">
+      {linhas.map((l) => (
+        <li key={l.setor} className="px-5 py-2.5">
+          <a
+            href={`/remanejamentos?setor=${encodeURIComponent(l.setor)}&ano=${ano}`}
+            className="flex items-baseline justify-between gap-3 hover:text-gtf-700"
+          >
+            <span className="truncate text-sm text-slate-700">{l.setor}</span>
+            <span className="shrink-0 text-sm tabular-nums text-slate-500">
+              {l.taxa !== null ? (
+                <>
+                  <strong className="font-semibold text-slate-900">
+                    {l.taxa.toFixed(1)}
+                  </strong>
+                  /100 · {l.casos} caso{l.casos === 1 ? "" : "s"} de {l.efetivo}
+                </>
+              ) : (
+                <>
+                  {l.casos} caso{l.casos === 1 ? "" : "s"} ·{" "}
+                  <span className="text-slate-400">sem efetivo</span>
+                </>
+              )}
+            </span>
+          </a>
+        </li>
+      ))}
+    </ul>
   );
 }
 
