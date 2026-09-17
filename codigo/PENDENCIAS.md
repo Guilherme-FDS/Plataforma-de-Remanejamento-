@@ -183,10 +183,12 @@ exige mascaramento por perfil, que hoje não existe porque não era necessário.
   comentado ramo a ramo com o `situacao_remanejamento()` equivalente no
   Postgres. A paridade entre TS e SQL continua manual (sem banco neste
   ambiente para rodar os dois lados juntos).
-- **Sem backup configurado no Supabase** (plano free, retenção curta) —
-  coberto por fora: `.github/workflows/backup-banco.yml` faz `pg_dump`
-  diário criptografado. Precisa dos secrets `SUPABASE_DB_URL` e
-  `BACKUP_GPG_PASSPHRASE` configurados no GitHub para começar a rodar.
+- ~~Sem backup configurado no Supabase~~ (plano free, retenção curta) —
+  **resolvido em 17/09**, coberto por fora: `.github/workflows/backup-banco.yml`
+  faz `pg_dump` diário criptografado numa branch órfã `backups` deste
+  repositório. Testado ao vivo e confirmado rodando — ver
+  `documentação/02-Solicitações por Data/2026-09-17.md` para o histórico
+  de erros corrigidos (senha, IPv6, versão do pg_dump, checkout).
 - ~~Sem MFA~~ — **resolvido em 16/09**, ver `documentação/02-Solicitações
   por Data/2026-09-16.md` e `2026-09-17.md` (diagnóstico de um incidente
   de adoção).
