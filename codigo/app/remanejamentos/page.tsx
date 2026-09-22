@@ -30,6 +30,11 @@ import type { Remanejamento, Situacao } from "@/lib/tipos";
 
 type Busca = Record<string, string | undefined>;
 
+const ORDENACOES: { valor: string; rotulo: string }[] = [
+  { valor: "recentes", rotulo: "Mais recentes" },
+  { valor: "antigos", rotulo: "Mais antigos" },
+];
+
 const SITUACOES: { valor: string; rotulo: string }[] = [
   { valor: "abertos", rotulo: "Vigentes (todos abertos)" },
   { valor: "em_andamento", rotulo: "Em andamento" },
@@ -127,8 +132,11 @@ export default async function ListaRemanejamentos({
     return true;
   });
 
+  const antigosPrimeiro = searchParams.ordenacao === "antigos";
   const ordenados = [...filtrados].sort((a, b) =>
-    (b.dataInicio ?? "").localeCompare(a.dataInicio ?? ""),
+    antigosPrimeiro
+      ? (a.dataInicio ?? "").localeCompare(b.dataInicio ?? "")
+      : (b.dataInicio ?? "").localeCompare(a.dataInicio ?? ""),
   );
 
   const regioes = [...new Set(todos.map((r) => r.regiao).filter(Boolean))]
@@ -182,6 +190,11 @@ export default async function ListaRemanejamentos({
               nome: "ano",
               rotulo: "Ano",
               opcoes: anos.map((a) => ({ valor: String(a), rotulo: String(a) })),
+            },
+            {
+              nome: "ordenacao",
+              rotulo: "Ordenar",
+              opcoes: ORDENACOES,
             },
           ]}
         />
