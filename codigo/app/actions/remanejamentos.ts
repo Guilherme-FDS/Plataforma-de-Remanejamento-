@@ -159,9 +159,31 @@ export async function editarRemanejamento(
 
   if (error) return { ok: false, erro: error.message };
 
+  // Mesma regra do lançamento: o cadastro da pessoa vale o setor/turno do
+  // caso mais recente. Corrigir um caso antigo não mexe no cadastro atual.
+  const { data: remanj } = await supabase
+    .from("remanejamentos").select("colaborador_id").eq("id", id).maybeSingle();
+  if (remanj?.colaborador_id) {
+    const { data: maisRecente } = await supabase
+      .from("remanejamentos")
+      .select("id")
+      .eq("colaborador_id", remanj.colaborador_id)
+      .eq("excluido", false)
+      .order("data_inicio", { ascending: false })
+      .order("id", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (maisRecente?.id === id) {
+      await supabase
+        .from("colaboradores")
+        .update({ setor_id: setorRes.data.id, turno_id: turnoRes.data.id })
+        .eq("id", remanj.colaborador_id);
+    }
+  }
+
   revalidatePath("/");
   revalidatePath("/remanejamentos");
-  revalidatePath("/colaboradores");
+  revalidatePath("/colaboradores", "layout");
 
   return { ok: true };
 }
