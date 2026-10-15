@@ -114,6 +114,8 @@ export default async function Indicadores({
           anterior={serieAnterior}
           rotuloAtual={String(ano)}
           rotuloAnterior={String(anterior)}
+          href={(a, mes) => `/remanejamentos?ano=${a}&mes=${mes}`}
+          anoAtual={ano}
         />
       </Cartao>
 
@@ -268,11 +270,15 @@ function SerieMensal({
   anterior,
   rotuloAtual,
   rotuloAnterior,
+  href,
+  anoAtual,
 }: {
   atual: number[];
   anterior: number[];
   rotuloAtual: string;
   rotuloAnterior: string;
+  href: (ano: number, mes: number) => string;
+  anoAtual: number;
 }) {
   const maximo = Math.max(...atual, ...anterior, 1);
 
@@ -294,8 +300,20 @@ function SerieMensal({
           {MESES_CURTOS.map((mes, i) => (
             <div key={mes} className="flex flex-1 flex-col items-center gap-1">
               <div className="flex h-36 w-full items-end justify-center gap-1">
-                <Coluna valor={anterior[i]} maximo={maximo} cor="bg-slate-300" />
-                <Coluna valor={atual[i]} maximo={maximo} cor="bg-slate-800" />
+                <Coluna
+                  valor={anterior[i]}
+                  maximo={maximo}
+                  cor="bg-slate-300 group-hover:bg-slate-400"
+                  href={href(anoAtual - 1, i + 1)}
+                  titulo={`${mes}/${rotuloAnterior}: ${anterior[i]} caso(s)`}
+                />
+                <Coluna
+                  valor={atual[i]}
+                  maximo={maximo}
+                  cor="bg-slate-800 group-hover:bg-gtf-700"
+                  href={href(anoAtual, i + 1)}
+                  titulo={`${mes}/${rotuloAtual}: ${atual[i]} caso(s)`}
+                />
               </div>
               <span className="text-xs text-slate-400">{mes}</span>
             </div>
@@ -310,15 +328,24 @@ function Coluna({
   valor,
   maximo,
   cor,
+  href,
+  titulo,
 }: {
   valor: number;
   maximo: number;
   cor: string;
+  href: string;
+  titulo: string;
 }) {
   // A altura da barra é percentual, então o pai precisa de altura resolvível
   // (h-full), senão o flex-col colapsa e a barra some.
+  // Sem casos, não há o que listar: fica como div, sem link.
+  const Tag = valor > 0 ? "a" : "div";
   return (
-    <div className="flex h-full w-1/2 flex-col items-center justify-end">
+    <Tag
+      {...(valor > 0 ? { href, title: titulo } : {})}
+      className="group flex h-full w-1/2 flex-col items-center justify-end"
+    >
       {valor > 0 && (
         <span className="mb-0.5 text-[10px] font-medium tabular-nums text-slate-500">
           {valor}
@@ -331,7 +358,7 @@ function Coluna({
           minHeight: valor > 0 ? 3 : 0,
         }}
       />
-    </div>
+    </Tag>
   );
 }
 

@@ -6,6 +6,7 @@ import { BotaoExcluir } from "@/components/BotaoExcluir";
 import { BotaoRestaurar } from "@/components/BotaoRestaurar";
 import { Cabecalho, Cartao, Selo, Vazio } from "@/components/ui";
 import {
+  MESES_CURTOS,
   TIPO_ROTULO,
   anoDe,
   anosDisponiveis,
@@ -16,6 +17,7 @@ import {
   formatarData,
   formatarDataObj,
   hoje,
+  mesDe,
   previsaoFim,
   normalizar,
   situacaoDe,
@@ -115,6 +117,7 @@ export default async function ListaRemanejamentos({
     if (searchParams.tipo && r.tipo !== searchParams.tipo) return false;
     if (searchParams.regiao && r.regiao !== searchParams.regiao) return false;
     if (searchParams.ano && String(anoDe(r)) !== searchParams.ano) return false;
+    if (searchParams.mes && String(mesDe(r)) !== searchParams.mes) return false;
 
     const sit = searchParams.situacao;
     if (sit) {
@@ -190,6 +193,14 @@ export default async function ListaRemanejamentos({
               nome: "ano",
               rotulo: "Ano",
               opcoes: anos.map((a) => ({ valor: String(a), rotulo: String(a) })),
+            },
+            {
+              nome: "mes",
+              rotulo: "Mês",
+              opcoes: MESES_CURTOS.map((m, i) => ({
+                valor: String(i + 1),
+                rotulo: m,
+              })),
             },
             {
               nome: "ordenacao",
