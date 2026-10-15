@@ -15,6 +15,7 @@ export default function FormularioLogin({ destino }: { destino: string }) {
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
   const [pedeCodigo, setPedeCodigo] = useState(false);
+  const [verSenha, setVerSenha] = useState(false);
   const [mostraEsqueci, setMostraEsqueci] = useState(false);
   const [emailReset, setEmailReset] = useState("");
   const [enviandoReset, setEnviandoReset] = useState(false);
@@ -182,15 +183,26 @@ export default function FormularioLogin({ destino }: { destino: string }) {
         >
           Senha
         </label>
-        <input
-          id="senha"
-          type="password"
-          autoComplete="current-password"
-          required
-          value={senha}
-          onChange={(e) => setSenha(e.target.value)}
-          className={campo}
-        />
+        <div className="relative">
+          <input
+            id="senha"
+            type={verSenha ? "text" : "password"}
+            autoComplete="current-password"
+            required
+            value={senha}
+            onChange={(e) => setSenha(e.target.value)}
+            className={`${campo} pr-20`}
+          />
+          <button
+            type="button"
+            onClick={() => setVerSenha((v) => !v)}
+            aria-label={verSenha ? "Ocultar senha" : "Mostrar senha"}
+            aria-pressed={verSenha}
+            className="absolute inset-y-0 right-0 px-3 text-xs font-medium text-slate-500 hover:text-slate-900"
+          >
+            {verSenha ? "Ocultar" : "Mostrar"}
+          </button>
+        </div>
       </div>
 
       {erro && (

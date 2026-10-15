@@ -1,6 +1,9 @@
 import { notFound, redirect } from "next/navigation";
 import { Cabecalho } from "@/components/ui";
+import BotaoVoltar from "@/components/BotaoVoltar";
 import FormularioEdicao from "@/components/FormularioEdicao";
+
+export const metadata = { title: "Editar caso" };
 import { obterRemanejamento, obterListas, perfilAtual } from "@/lib/dados";
 
 export default async function PaginaEditar({
@@ -26,7 +29,10 @@ export default async function PaginaEditar({
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-8">
-      <Cabecalho titulo={`Editar — ${remanj.nome}`} />
+      <Cabecalho
+        titulo={`Editar — ${remanj.nome}`}
+        acao={<BotaoVoltar padrao="/remanejamentos" rotulo="Cancelar" />}
+      />
       <div className="mt-6">
         <FormularioEdicao remanj={remanj} listas={listas} />
       </div>

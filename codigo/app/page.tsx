@@ -16,6 +16,9 @@ import {
 import { listarRemanejamentos } from "@/lib/dados";
 import type { Remanejamento } from "@/lib/tipos";
 
+
+export const metadata = { title: "Painel" };
+
 export default async function Painel() {
   const ref = hoje();
   const todos = await listarRemanejamentos();
