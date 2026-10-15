@@ -47,6 +47,9 @@ const SITUACOES: { valor: string; rotulo: string }[] = [
   { valor: "encerrado", rotulo: "Encerrado" },
 ];
 
+
+export const metadata = { title: "Casos" };
+
 export default async function ListaRemanejamentos({
   searchParams,
 }: {

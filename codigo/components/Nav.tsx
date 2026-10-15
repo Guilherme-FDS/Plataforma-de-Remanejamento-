@@ -48,7 +48,10 @@ const ITENS = [
 ];
 
 function estaAtivo(caminho: string, href: string) {
-  return href === "/" ? caminho === "/" : caminho.startsWith(href);
+  if (href === "/") return caminho === "/";
+  // Ficha do colaborador é aberta a partir dos casos.
+  if (href === "/remanejamentos" && caminho.startsWith("/colaboradores")) return true;
+  return caminho.startsWith(href);
 }
 
 /** "Maria Calsavara" -> "MC". Primeiro e último nome, ignorando partículas. */
@@ -296,7 +299,7 @@ function SeletorUnidade({
           router.refresh();
         });
       }}
-      className="h-8 shrink-0 rounded-md border border-slate-200 bg-slate-50 px-2 text-xs font-medium text-slate-600"
+      className="h-10 shrink-0 rounded-md border border-slate-200 bg-slate-50 px-3 text-sm font-medium text-slate-600"
       title="Unidade ativa"
       aria-label="Unidade ativa"
     >

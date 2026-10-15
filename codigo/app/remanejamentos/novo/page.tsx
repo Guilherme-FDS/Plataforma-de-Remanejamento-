@@ -8,6 +8,9 @@ import {
   sugestoesContraindicacao,
 } from "@/lib/dados";
 
+
+export const metadata = { title: "Novo caso" };
+
 export default async function NovoLancamento() {
   const [listas, colaboradores, sugestoes, perfil] = await Promise.all([
     obterListas(),

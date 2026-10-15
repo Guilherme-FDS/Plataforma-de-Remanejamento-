@@ -13,6 +13,9 @@ import {
 import { listarRemanejamentos, obterListasAdmin } from "@/lib/dados";
 import type { Remanejamento } from "@/lib/tipos";
 
+
+export const metadata = { title: "Indicadores" };
+
 export default async function Indicadores({
   searchParams,
 }: {

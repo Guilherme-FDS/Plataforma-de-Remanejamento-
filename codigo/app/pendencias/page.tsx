@@ -38,6 +38,9 @@ const GRUPOS: {
   },
 ];
 
+
+export const metadata = { title: "Pendências" };
+
 export default async function Pendencias() {
   const ref = hoje();
   const [daImportacao, todos, colaboradores, perfil] = await Promise.all([

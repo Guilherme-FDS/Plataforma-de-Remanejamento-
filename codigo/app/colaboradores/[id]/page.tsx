@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { cache } from "react";
 import { notFound } from "next/navigation";
 import { Cabecalho, Cartao, Etiqueta, Indicador, Selo } from "@/components/ui";
 import {
@@ -12,7 +12,16 @@ import {
   previsaoFim,
   situacaoDe,
 } from "@/lib/calculos";
+import BotaoVoltar from "@/components/BotaoVoltar";
 import { historicoDoColaborador, obterColaborador } from "@/lib/dados";
+
+// Metadata e página consultam o mesmo colaborador: uma ida ao banco só.
+const colaboradorPorId = cache(obterColaborador);
+
+export async function generateMetadata({ params }: { params: { id: string } }) {
+  const c = await colaboradorPorId(Number(params.id));
+  return { title: c?.nome ?? "Colaborador" };
+}
 
 export default async function FichaColaborador({
   params,
@@ -21,7 +30,7 @@ export default async function FichaColaborador({
 }) {
   const id = Number(params.id);
   const [colaborador, historico] = await Promise.all([
-    obterColaborador(id),
+    colaboradorPorId(id),
     historicoDoColaborador(id),
   ]);
   if (!colaborador) notFound();
@@ -41,19 +50,14 @@ export default async function FichaColaborador({
         titulo={colaborador.nome}
         descricao={`${colaborador.matricula ? `Matrícula ${colaborador.matricula}` : "Sem matrícula — pendente de cadastro no RH"} · ${colaborador.setor ?? "setor não informado"} · ${colaborador.turno ?? "turno não informado"}`}
         acao={
-          <Link
-            href="/remanejamentos"
-            className="text-sm font-medium text-slate-500 hover:text-slate-900"
-          >
-            ← Voltar
-          </Link>
+          <BotaoVoltar padrao="/remanejamentos" />
         }
       />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Indicador rotulo="Remanejamentos" valor={historico.length} />
         <Indicador
-          rotulo="Em aberto"
+          rotulo="Vigentes"
           valor={abertos.length}
           destaque={abertos.length > 0 ? "atencao" : undefined}
         />

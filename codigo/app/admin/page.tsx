@@ -5,6 +5,9 @@ import { listarUsuarios } from "@/app/actions/usuarios";
 import { listarErrosRecentes } from "@/app/actions/observabilidade";
 import AdminCliente from "./AdminCliente";
 
+
+export const metadata = { title: "Configurações" };
+
 export default async function PaginaAdmin() {
   const perfil = await perfilAtual();
 
