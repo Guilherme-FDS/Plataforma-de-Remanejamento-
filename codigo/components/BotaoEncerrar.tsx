@@ -49,7 +49,7 @@ export function BotaoEncerrar({ id }: { id: number }) {
           setAberto(false);
           setErro(null);
         }}
-        className="text-xs text-slate-400 hover:text-slate-700"
+        className="text-xs text-slate-500 hover:text-slate-700"
       >
         Cancelar
       </button>

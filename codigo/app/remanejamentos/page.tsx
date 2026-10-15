@@ -6,6 +6,7 @@ import { BotaoExcluir } from "@/components/BotaoExcluir";
 import { BotaoRestaurar } from "@/components/BotaoRestaurar";
 import { Cabecalho, Cartao, Selo, Vazio } from "@/components/ui";
 import {
+  MESES_CURTOS,
   TIPO_ROTULO,
   anoDe,
   anosDisponiveis,
@@ -16,6 +17,7 @@ import {
   formatarData,
   formatarDataObj,
   hoje,
+  mesDe,
   previsaoFim,
   normalizar,
   situacaoDe,
@@ -91,7 +93,7 @@ export default async function ListaRemanejamentos({
                     <p className="truncate text-sm font-medium text-slate-900">
                       {r.nome}
                     </p>
-                    <p className="text-xs text-slate-400">
+                    <p className="text-xs text-slate-500">
                       {[r.setor, r.turno, descreverSegmento(r)]
                         .filter(Boolean)
                         .join(" · ")}
@@ -115,6 +117,7 @@ export default async function ListaRemanejamentos({
     if (searchParams.tipo && r.tipo !== searchParams.tipo) return false;
     if (searchParams.regiao && r.regiao !== searchParams.regiao) return false;
     if (searchParams.ano && String(anoDe(r)) !== searchParams.ano) return false;
+    if (searchParams.mes && String(mesDe(r)) !== searchParams.mes) return false;
 
     const sit = searchParams.situacao;
     if (sit) {
@@ -192,6 +195,14 @@ export default async function ListaRemanejamentos({
               opcoes: anos.map((a) => ({ valor: String(a), rotulo: String(a) })),
             },
             {
+              nome: "mes",
+              rotulo: "Mês",
+              opcoes: MESES_CURTOS.map((m, i) => ({
+                valor: String(i + 1),
+                rotulo: m,
+              })),
+            },
+            {
               nome: "ordenacao",
               rotulo: "Ordenar",
               opcoes: ORDENACOES,
@@ -261,15 +272,15 @@ function Linha({
         >
           {r.nome}
         </Link>
-        <p className="text-xs text-slate-400">{r.matricula}</p>
+        <p className="text-xs text-slate-500">{r.matricula}</p>
       </td>
       <td className="px-3 py-3 text-slate-600">
         {r.setor ?? "—"}
-        <p className="text-xs text-slate-400">{r.turno ?? "—"}</p>
+        <p className="text-xs text-slate-500">{r.turno ?? "—"}</p>
       </td>
       <td className="px-3 py-3 text-slate-600">
         {descreverSegmento(r)}
-        <p className="max-w-56 truncate text-xs text-slate-400" title={r.causa ?? ""}>
+        <p className="max-w-56 truncate text-xs text-slate-500" title={r.causa ?? ""}>
           {r.causa ?? ""}
         </p>
       </td>

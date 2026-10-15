@@ -1,3 +1,4 @@
+import { destinoSeguro } from "@/lib/destino";
 import FormularioLogin from "@/components/FormularioLogin";
 import Logo from "@/components/Logo";
 
@@ -8,7 +9,7 @@ export default function Login({
 }: {
   searchParams: { de?: string; motivo?: string; erro?: string };
 }) {
-  const destino = searchParams.de?.startsWith("/") ? searchParams.de : "/";
+  const destino = destinoSeguro(searchParams.de);
 
   return (
     <div className="mx-auto flex min-h-[80dvh] max-w-sm flex-col justify-center py-8">

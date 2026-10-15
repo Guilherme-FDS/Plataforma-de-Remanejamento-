@@ -104,7 +104,7 @@ export default function Nav({
             <span className="hidden text-sm font-semibold tracking-tight text-slate-900 sm:inline">
               Remanejamento
               {rotuloUnidade && (
-                <span className="ml-1.5 font-normal text-slate-400">
+                <span className="ml-1.5 font-normal text-slate-500">
                   {rotuloUnidade}
                 </span>
               )}
@@ -188,7 +188,7 @@ export default function Nav({
                 href={item.href}
                 aria-current={ativo ? "page" : undefined}
                 className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] font-medium transition ${
-                  ativo ? "text-gtf-700" : "text-slate-400"
+                  ativo ? "text-gtf-700" : "text-slate-500"
                 }`}
               >
                 <Icone />
@@ -250,7 +250,7 @@ export default function Nav({
               : "Ativar verificação em 2 etapas"}
           </Link>
 
-          <p className="mt-4 text-xs leading-relaxed text-slate-400">
+          <p className="mt-4 text-xs leading-relaxed text-slate-500">
             Para alterar qualquer um dos demais dados, procure um administrador
             da plataforma.
           </p>
@@ -298,6 +298,7 @@ function SeletorUnidade({
       }}
       className="h-8 shrink-0 rounded-md border border-slate-200 bg-slate-50 px-2 text-xs font-medium text-slate-600"
       title="Unidade ativa"
+      aria-label="Unidade ativa"
     >
       {unidades.map((u) => (
         <option key={u.id} value={u.id}>

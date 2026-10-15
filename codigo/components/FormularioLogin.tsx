@@ -101,7 +101,7 @@ export default function FormularioLogin({ destino }: { destino: string }) {
             setPedeCodigo(false);
             setSenha("");
           }}
-          className="block w-full text-center text-xs text-slate-400 hover:text-slate-700"
+          className="block w-full text-center text-xs text-slate-500 hover:text-slate-700"
         >
           ← Entrar com outra conta
         </button>
@@ -146,7 +146,7 @@ export default function FormularioLogin({ destino }: { destino: string }) {
         </form>
         <button
           onClick={() => { setMostraEsqueci(false); setFeedbackReset(null); }}
-          className="block w-full text-center text-xs text-slate-400 hover:text-slate-700"
+          className="block w-full text-center text-xs text-slate-500 hover:text-slate-700"
         >
           ← Voltar ao login
         </button>
@@ -210,7 +210,7 @@ export default function FormularioLogin({ destino }: { destino: string }) {
       <button
         type="button"
         onClick={() => setMostraEsqueci(true)}
-        className="block w-full text-center text-xs text-slate-400 hover:text-gtf-700"
+        className="block w-full text-center text-xs text-slate-500 hover:text-gtf-700"
       >
         Esqueci a senha
       </button>

@@ -19,7 +19,7 @@ export default async function PaginaSeguranca() {
   const [mfa, resumo] = await Promise.all([estadoMfa(), resumoMfa()]);
 
   return (
-    <main className="mx-auto max-w-2xl px-4 py-8">
+    <div className="mx-auto max-w-2xl px-4 py-8">
       <Cabecalho
         titulo="Segurança"
         descricao="Como esta conta é protegida. Estas configurações valem só para você, exceto onde estiver indicado."
@@ -32,6 +32,6 @@ export default async function PaginaSeguranca() {
           <PainelMfaEquipe obrigatorio={mfa.obrigatorio} resumo={resumo} />
         )}
       </div>
-    </main>
+    </div>
   );
 }

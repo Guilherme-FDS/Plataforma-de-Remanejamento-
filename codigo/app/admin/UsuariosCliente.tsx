@@ -119,7 +119,7 @@ export default function UsuariosCliente({
             </p>
             <button
               onClick={() => setConvite(null)}
-              className="text-xs text-slate-400 hover:text-slate-700"
+              className="text-xs text-slate-500 hover:text-slate-700"
             >
               Fechar
             </button>
@@ -134,7 +134,7 @@ export default function UsuariosCliente({
       {/* Lista */}
       <div className="rounded-xl border border-slate-200 bg-white divide-y divide-slate-100">
         {usuarios.length === 0 && (
-          <p className="px-5 py-8 text-center text-sm text-slate-400">
+          <p className="px-5 py-8 text-center text-sm text-slate-500">
             Nenhum usuário cadastrado.
           </p>
         )}
@@ -299,7 +299,7 @@ function LinhaUsuario({
               </span>
             )}
           </div>
-          <p className="mt-0.5 text-xs text-slate-400">
+          <p className="mt-0.5 text-xs text-slate-500">
             {u.email} · {funcaoRotulo(u.funcao)} · {u.unidadeNome ?? "sem unidade"}
             {u.ultimoLogin && (
               <> · último acesso {new Date(u.ultimoLogin).toLocaleDateString("pt-BR")}</>
@@ -333,7 +333,7 @@ function LinhaUsuario({
             disabled={pending}
             className={`text-xs disabled:opacity-40 ${
               u.ativo
-                ? "text-slate-400 hover:text-rose-600"
+                ? "text-slate-500 hover:text-rose-600"
                 : "text-emerald-600 hover:underline"
             }`}
           >
@@ -529,7 +529,7 @@ function FormUsuario({
             </label>
             <div className="flex flex-wrap gap-3 rounded-md border border-slate-200 bg-white px-3 py-2">
               {unidades.filter((u) => u.id !== unidadeId).length === 0 && (
-                <p className="text-xs text-slate-400">Não há outras unidades cadastradas.</p>
+                <p className="text-xs text-slate-500">Não há outras unidades cadastradas.</p>
               )}
               {unidades
                 .filter((u) => u.id !== unidadeId)

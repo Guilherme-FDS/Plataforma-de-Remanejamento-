@@ -146,7 +146,7 @@ function ListaErros({ erros }: { erros: ErroRegistrado[] }) {
       </div>
 
       {erros.length === 0 ? (
-        <p className="px-5 py-6 text-sm text-slate-400">
+        <p className="px-5 py-6 text-sm text-slate-500">
           Nenhum erro registrado. Bom sinal.
         </p>
       ) : (
@@ -157,13 +157,13 @@ function ListaErros({ erros }: { erros: ErroRegistrado[] }) {
                 <span className="font-mono text-xs font-medium text-slate-700">
                   {e.contexto}
                 </span>
-                <span className="text-xs text-slate-400">
+                <span className="text-xs text-slate-500">
                   {new Date(e.ocorridoEm).toLocaleString("pt-BR")}
                 </span>
               </div>
               <p className="mt-1 break-words text-sm text-rose-700">{e.mensagem}</p>
               {(e.rota || e.usuarioNome) && (
-                <p className="mt-1 text-xs text-slate-400">
+                <p className="mt-1 text-xs text-slate-500">
                   {e.rota && <span>{e.rota}</span>}
                   {e.rota && e.usuarioNome && " · "}
                   {e.usuarioNome && <span>{e.usuarioNome}</span>}
@@ -260,7 +260,7 @@ function ListaSimples({
                 </button>
                 <button
                   onClick={() => setEditandoId(null)}
-                  className="text-xs text-slate-400 hover:text-slate-700"
+                  className="text-xs text-slate-500 hover:text-slate-700"
                 >
                   Cancelar
                 </button>
@@ -268,13 +268,13 @@ function ListaSimples({
             ) : (
               <>
                 <span
-                  className={`flex-1 text-sm ${!item.ativo ? "text-slate-400 line-through" : "text-slate-800"}`}
+                  className={`flex-1 text-sm ${!item.ativo ? "text-slate-500 line-through" : "text-slate-800"}`}
                 >
                   {item.nome}
                 </span>
                 <button
                   onClick={() => iniciarEdicao(item)}
-                  className="text-xs text-slate-400 hover:text-slate-700"
+                  className="text-xs text-slate-500 hover:text-slate-700"
                 >
                   Renomear
                 </button>
@@ -283,7 +283,7 @@ function ListaSimples({
                     onClick={() =>
                       startTransition(() => onToggle(item.id, !item.ativo).then())
                     }
-                    className={`text-xs ${item.ativo ? "text-slate-400 hover:text-rose-600" : "text-emerald-600 hover:underline"}`}
+                    className={`text-xs ${item.ativo ? "text-slate-500 hover:text-rose-600" : "text-emerald-600 hover:underline"}`}
                   >
                     {item.ativo ? "Desativar" : "Reativar"}
                   </button>
@@ -389,20 +389,20 @@ function ListaSetores({ setores }: { setores: SetorAdmin[] }) {
                   className="h-8 w-24 rounded border border-slate-300 px-2 text-sm focus:border-gtf-600 focus:outline-none"
                 />
                 <button onClick={salvarEdicao} disabled={pending} className="text-xs font-medium text-gtf-700 hover:underline disabled:opacity-50">Salvar</button>
-                <button onClick={() => setEditandoId(null)} className="text-xs text-slate-400 hover:text-slate-700">Cancelar</button>
+                <button onClick={() => setEditandoId(null)} className="text-xs text-slate-500 hover:text-slate-700">Cancelar</button>
               </>
             ) : (
               <>
-                <span className={`flex-1 text-sm ${!s.ativo ? "text-slate-400 line-through" : "text-slate-800"}`}>
+                <span className={`flex-1 text-sm ${!s.ativo ? "text-slate-500 line-through" : "text-slate-800"}`}>
                   {s.nome}
                 </span>
-                <span className="text-xs tabular-nums text-slate-400">
+                <span className="text-xs tabular-nums text-slate-500">
                   {s.efetivo !== null ? `${s.efetivo} colab.` : "sem efetivo"}
                 </span>
-                <button onClick={() => iniciarEdicao(s)} className="text-xs text-slate-400 hover:text-slate-700">Editar</button>
+                <button onClick={() => iniciarEdicao(s)} className="text-xs text-slate-500 hover:text-slate-700">Editar</button>
                 <button
                   onClick={() => startTransition(() => toggleSetor(s.id, !s.ativo).then())}
-                  className={`text-xs ${s.ativo ? "text-slate-400 hover:text-rose-600" : "text-emerald-600 hover:underline"}`}
+                  className={`text-xs ${s.ativo ? "text-slate-500 hover:text-rose-600" : "text-emerald-600 hover:underline"}`}
                 >
                   {s.ativo ? "Desativar" : "Reativar"}
                 </button>
@@ -520,15 +520,15 @@ function ListaSegmentos({
                       ))}
                     </select>
                     <button onClick={salvarEdicao} disabled={pending} className="text-xs font-medium text-gtf-700 hover:underline disabled:opacity-50">Salvar</button>
-                    <button onClick={() => setEditandoId(null)} className="text-xs text-slate-400 hover:text-slate-700">Cancelar</button>
+                    <button onClick={() => setEditandoId(null)} className="text-xs text-slate-500 hover:text-slate-700">Cancelar</button>
                   </>
                 ) : (
                   <>
-                    <span className={`flex-1 text-sm ${!s.ativo ? "text-slate-400 line-through" : "text-slate-800"}`}>{s.nome}</span>
-                    <button onClick={() => iniciarEdicao(s)} className="text-xs text-slate-400 hover:text-slate-700">Renomear</button>
+                    <span className={`flex-1 text-sm ${!s.ativo ? "text-slate-500 line-through" : "text-slate-800"}`}>{s.nome}</span>
+                    <button onClick={() => iniciarEdicao(s)} className="text-xs text-slate-500 hover:text-slate-700">Renomear</button>
                     <button
                       onClick={() => startTransition(() => toggleSegmento(s.id, !s.ativo).then())}
-                      className={`text-xs ${s.ativo ? "text-slate-400 hover:text-rose-600" : "text-emerald-600 hover:underline"}`}
+                      className={`text-xs ${s.ativo ? "text-slate-500 hover:text-rose-600" : "text-emerald-600 hover:underline"}`}
                     >
                       {s.ativo ? "Desativar" : "Reativar"}
                     </button>

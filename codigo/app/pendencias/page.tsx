@@ -115,7 +115,7 @@ export default async function Pendencias() {
                   >
                     {p.nome}
                   </Link>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-slate-500">
                     {[p.matricula ?? "sem matrícula", p.setor]
                       .filter(Boolean)
                       .join(" · ")}
@@ -224,7 +224,7 @@ function LinhaImportacao({
         p.resolvida ? "opacity-60" : ""
       }`}
     >
-      <span className="w-12 shrink-0 text-xs font-medium tabular-nums text-slate-400">
+      <span className="w-12 shrink-0 text-xs font-medium tabular-nums text-slate-500">
         L{p.linha}
       </span>
       <div className="min-w-0 flex-1">

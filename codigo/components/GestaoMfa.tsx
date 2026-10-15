@@ -175,7 +175,7 @@ export default function GestaoMfa({ obrigatorio }: { obrigatorio: boolean }) {
         )}
 
         {fatores === null && (
-          <p className="text-sm text-slate-400">Carregando…</p>
+          <p className="text-sm text-slate-500">Carregando…</p>
         )}
 
         {/* ---------------------------------------------- cadastro em curso */}
@@ -213,7 +213,7 @@ export default function GestaoMfa({ obrigatorio }: { obrigatorio: boolean }) {
               <button
                 type="button"
                 onClick={() => setVerSegredo((v) => !v)}
-                className="text-xs text-slate-400 underline hover:text-slate-700"
+                className="text-xs text-slate-500 underline hover:text-slate-700"
               >
                 {verSegredo
                   ? "Ocultar código manual"
@@ -275,7 +275,7 @@ export default function GestaoMfa({ obrigatorio }: { obrigatorio: boolean }) {
                     <p className="truncate text-sm text-slate-800">
                       {f.friendly_name || "Autenticador"}
                     </p>
-                    <p className="text-xs text-slate-400">
+                    <p className="text-xs text-slate-500">
                       Ativado em{" "}
                       {new Date(f.created_at).toLocaleDateString("pt-BR")}
                     </p>

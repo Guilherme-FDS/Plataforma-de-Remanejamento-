@@ -25,11 +25,11 @@ export default async function PaginaEditar({
   if (!remanj) notFound();
 
   return (
-    <main className="mx-auto max-w-2xl px-4 py-8">
+    <div className="mx-auto max-w-2xl px-4 py-8">
       <Cabecalho titulo={`Editar — ${remanj.nome}`} />
       <div className="mt-6">
         <FormularioEdicao remanj={remanj} listas={listas} />
       </div>
-    </main>
+    </div>
   );
 }

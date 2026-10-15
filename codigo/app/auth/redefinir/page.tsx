@@ -118,7 +118,7 @@ export default function PaginaRedefinir() {
 
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         {estadoSessao === "verificando" ? (
-          <p className="py-2 text-center text-sm text-slate-400">
+          <p className="py-2 text-center text-sm text-slate-500">
             Conferindo o link…
           </p>
         ) : estadoSessao === "sem-sessao" ? (
@@ -161,7 +161,7 @@ export default function PaginaRedefinir() {
                 className={campo}
                 autoFocus
               />
-              <p className="mt-1 text-xs text-slate-400">
+              <p className="mt-1 text-xs text-slate-500">
                 Mínimo 8 caracteres, com letras e números.
               </p>
             </div>
