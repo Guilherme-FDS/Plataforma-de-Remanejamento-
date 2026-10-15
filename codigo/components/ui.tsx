@@ -140,7 +140,7 @@ export function Barras({
   const soma = total ?? itens.reduce((s, i) => s + i.total, 0);
 
   if (itens.length === 0) {
-    return <p className="px-5 py-6 text-sm text-slate-400">Sem dados.</p>;
+    return <p className="px-5 py-6 text-sm text-slate-500">Sem dados.</p>;
   }
 
   return (
@@ -155,7 +155,7 @@ export function Barras({
               </span>
               <span className="shrink-0 text-sm font-medium tabular-nums text-slate-900">
                 {item.total}
-                <span className="ml-1.5 text-xs font-normal text-slate-400">
+                <span className="ml-1.5 text-xs font-normal text-slate-500">
                   {pct.toFixed(0)}%
                 </span>
               </span>
@@ -186,7 +186,7 @@ export function Barras({
 
 export function Vazio({ children }: { children: ReactNode }) {
   return (
-    <p className="px-5 py-8 text-center text-sm text-slate-400">{children}</p>
+    <p className="px-5 py-8 text-center text-sm text-slate-500">{children}</p>
   );
 }
 
@@ -213,7 +213,7 @@ export function Modal({
           <h2 className="text-sm font-semibold text-slate-900">{titulo}</h2>
           <button
             onClick={onFechar}
-            className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+            className="rounded p-1 text-slate-500 hover:bg-slate-100 hover:text-slate-700"
             aria-label="Fechar"
           >
             ✕

@@ -48,7 +48,7 @@ export default async function ImprimirRelatorio({
   ].join(" · ");
 
   return (
-    <main className="mx-auto max-w-4xl px-6 py-8">
+    <div className="mx-auto max-w-4xl px-6 py-8">
       <AutoPrint />
 
       <h1 className="text-xl font-bold text-slate-900">
@@ -61,7 +61,7 @@ export default async function ImprimirRelatorio({
       <hr className="mt-3 mb-5 border-slate-300" />
 
       {filtrados.length === 0 ? (
-        <p className="py-8 text-center text-sm text-slate-400">
+        <p className="py-8 text-center text-sm text-slate-500">
           Nenhum registro com esses filtros.
         </p>
       ) : (
@@ -84,16 +84,16 @@ export default async function ImprimirRelatorio({
                 <tr key={r.id} className="align-top">
                   <td className="py-2 pr-3">
                     <p className="font-medium text-slate-900">{r.nome}</p>
-                    <p className="text-xs text-slate-400">{r.matricula ?? "—"}</p>
+                    <p className="text-xs text-slate-500">{r.matricula ?? "—"}</p>
                   </td>
                   <td className="py-2 pr-3 text-slate-600">
                     {r.setor ?? "—"}
-                    <p className="text-xs text-slate-400">{r.turno ?? "—"}</p>
+                    <p className="text-xs text-slate-500">{r.turno ?? "—"}</p>
                   </td>
                   <td className="py-2 pr-3 text-slate-600">
                     {descreverSegmento(r)}
                     {r.causa && (
-                      <p className="text-xs text-slate-400">{r.causa}</p>
+                      <p className="text-xs text-slate-500">{r.causa}</p>
                     )}
                   </td>
                   <td className="py-2 pr-3 text-slate-600">{TIPO_ROTULO[r.tipo]}</td>
@@ -112,6 +112,6 @@ export default async function ImprimirRelatorio({
           </tbody>
         </table>
       )}
-    </main>
+    </div>
   );
 }

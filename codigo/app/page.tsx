@@ -85,7 +85,7 @@ export default async function Painel() {
                 <div>
                   <p className="text-sm font-medium text-slate-900">
                     {f.regiao}{" "}
-                    <span className="font-normal text-slate-400">em</span>{" "}
+                    <span className="font-normal text-slate-500">em</span>{" "}
                     {f.setor}
                   </p>
                   <p className="mt-0.5 text-xs text-slate-500">
@@ -189,7 +189,7 @@ export default async function Painel() {
                         )}
                       </p>
                     </div>
-                    <span className="shrink-0 text-sm font-medium tabular-nums text-slate-400">
+                    <span className="shrink-0 text-sm font-medium tabular-nums text-slate-500">
                       {p.intervaloDias !== null ? `${p.intervaloDias}d` : ""}
                     </span>
                   </Link>
@@ -255,7 +255,7 @@ function ListaCasos({
                       className={
                         dias < 0
                           ? "font-medium text-amber-700"
-                          : "text-slate-400"
+                          : "text-slate-500"
                       }
                     >
                       {dias < 0
@@ -267,7 +267,7 @@ function ListaCasos({
                   )}
                 </>
               ) : (
-                <p className="text-slate-400">
+                <p className="text-slate-500">
                   início {formatarData(r.dataInicio)}
                 </p>
               )}

@@ -40,7 +40,7 @@ export function BotaoExcluir({ id }: { id: number }) {
           setConfirmando(false);
           setErro(null);
         }}
-        className="text-xs text-slate-400 hover:text-slate-700"
+        className="text-xs text-slate-500 hover:text-slate-700"
       >
         Cancelar
       </button>

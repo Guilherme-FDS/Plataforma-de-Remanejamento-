@@ -127,7 +127,7 @@ export default function RelatorioCliente({
                 {setoresSel.length > 0 && (
                   <button
                     onClick={() => setSetoresSel([])}
-                    className="text-xs text-slate-400 hover:text-slate-700"
+                    className="text-xs text-slate-500 hover:text-slate-700"
                   >
                     Limpar
                   </button>
@@ -282,20 +282,20 @@ export default function RelatorioCliente({
                         >
                           {r.nome}
                         </a>
-                        <p className="text-xs text-slate-400">
+                        <p className="text-xs text-slate-500">
                           {r.matricula ?? "—"}
                         </p>
                       </td>
                       <td className="px-3 py-3 text-slate-600">
                         {r.setor ?? "—"}
-                        <p className="text-xs text-slate-400">
+                        <p className="text-xs text-slate-500">
                           {r.turno ?? "—"}
                         </p>
                       </td>
                       <td className="px-3 py-3 text-slate-600">
                         {descreverSegmento(r)}
                         {r.causa && (
-                          <p className="max-w-40 truncate text-xs text-slate-400">
+                          <p className="max-w-40 truncate text-xs text-slate-500">
                             {r.causa}
                           </p>
                         )}

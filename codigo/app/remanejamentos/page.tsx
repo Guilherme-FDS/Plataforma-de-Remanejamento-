@@ -93,7 +93,7 @@ export default async function ListaRemanejamentos({
                     <p className="truncate text-sm font-medium text-slate-900">
                       {r.nome}
                     </p>
-                    <p className="text-xs text-slate-400">
+                    <p className="text-xs text-slate-500">
                       {[r.setor, r.turno, descreverSegmento(r)]
                         .filter(Boolean)
                         .join(" · ")}
@@ -272,15 +272,15 @@ function Linha({
         >
           {r.nome}
         </Link>
-        <p className="text-xs text-slate-400">{r.matricula}</p>
+        <p className="text-xs text-slate-500">{r.matricula}</p>
       </td>
       <td className="px-3 py-3 text-slate-600">
         {r.setor ?? "—"}
-        <p className="text-xs text-slate-400">{r.turno ?? "—"}</p>
+        <p className="text-xs text-slate-500">{r.turno ?? "—"}</p>
       </td>
       <td className="px-3 py-3 text-slate-600">
         {descreverSegmento(r)}
-        <p className="max-w-56 truncate text-xs text-slate-400" title={r.causa ?? ""}>
+        <p className="max-w-56 truncate text-xs text-slate-500" title={r.causa ?? ""}>
           {r.causa ?? ""}
         </p>
       </td>

@@ -22,11 +22,11 @@ export default async function PaginaAdmin() {
     listarErrosRecentes(),
   ]);
   return (
-    <main className="mx-auto max-w-3xl px-4 py-8">
+    <div className="mx-auto max-w-3xl px-4 py-8">
       <Cabecalho titulo="Configurações" />
       <div className="mt-6">
         <AdminCliente listas={listas} usuarios={usuarios} unidades={unidades} erros={erros} />
       </div>
-    </main>
+    </div>
   );
 }

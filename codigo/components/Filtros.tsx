@@ -57,6 +57,7 @@ export default function Filtros({
       {campos.map((campo) => (
         <select
           key={campo.nome}
+          aria-label={campo.rotulo}
           value={params.get(campo.nome) ?? ""}
           onChange={(e) => aplicar(campo.nome, e.target.value)}
           className={`h-9 rounded-md border bg-white px-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-gtf-600 ${

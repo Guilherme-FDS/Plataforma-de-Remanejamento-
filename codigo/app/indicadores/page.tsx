@@ -254,7 +254,7 @@ function IncidenciaSetores({
               ) : (
                 <>
                   {l.casos} caso{l.casos === 1 ? "" : "s"} ·{" "}
-                  <span className="text-slate-400">sem efetivo</span>
+                  <span className="text-slate-500">sem efetivo</span>
                 </>
               )}
             </span>
@@ -315,7 +315,7 @@ function SerieMensal({
                   titulo={`${mes}/${rotuloAtual}: ${atual[i]} caso(s)`}
                 />
               </div>
-              <span className="text-xs text-slate-400">{mes}</span>
+              <span className="text-xs text-slate-500">{mes}</span>
             </div>
           ))}
         </div>
@@ -416,7 +416,7 @@ function ComparativoTipo({
                   className={`px-5 py-2.5 text-right font-medium tabular-nums ${
                     Math.abs(delta) >= 20
                       ? "text-amber-700"
-                      : "text-slate-400"
+                      : "text-slate-500"
                   }`}
                 >
                   {delta >= 0 ? "+" : ""}
