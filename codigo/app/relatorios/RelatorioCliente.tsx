@@ -65,8 +65,16 @@ export default function RelatorioCliente({
   const set = <K extends keyof ParametrosRelatorio>(k: K, v: ParametrosRelatorio[K]) =>
     setP((atual) => ({ ...atual, [k]: v }));
 
-  const lista = useMemo(() => montarRelatorio(todos, p, ref), [todos, p, ref]);
-  const query = relatorioParaParams(p).toString();
+  const setores = useMemo(() => contagem(todos, (r) => r.setor), [todos]);
+  // Todos marcados = nenhum filtro de setor: PDF diz "Todos os setores" e
+  // a URL não carrega a lista inteira.
+  const efetivo = useMemo(
+    () => (p.setores.length === setores.length ? { ...p, setores: [] } : p),
+    [p, setores.length],
+  );
+
+  const lista = useMemo(() => montarRelatorio(todos, efetivo, ref), [todos, efetivo, ref]);
+  const query = relatorioParaParams(efetivo).toString();
   const resumido = p.modelo === "resumido";
 
   // Mantém a URL em dia sem gerar histórico a cada clique.
@@ -74,12 +82,11 @@ export default function RelatorioCliente({
     window.history.replaceState(null, "", `/relatorios?${query}`);
   }, [query]);
 
-  const setores = useMemo(() => contagem(todos, (r) => r.setor), [todos]);
   const turnos = useMemo(() => contagem(todos, (r) => r.turno), [todos]);
   const supervisores = useMemo(() => contagem(todos, (r) => r.supervisor), [todos]);
 
   const filtrosAtivos =
-    p.setores.length +
+    efetivo.setores.length +
     (p.situacao !== "todos" ? 1 : 0) +
     (p.turno ? 1 : 0) +
     (p.supervisor ? 1 : 0) +
@@ -195,11 +202,21 @@ export default function RelatorioCliente({
         <Grupo
           titulo="Setores"
           acao={
-            p.setores.length > 0 && (
-              <button onClick={() => set("setores", [])} className="text-xs font-medium text-gtf-700 hover:underline">
-                limpar
-              </button>
-            )
+            <div className="flex gap-3">
+              {p.setores.length < setores.length && (
+                <button
+                  onClick={() => set("setores", setores.map(([s]) => s))}
+                  className="text-xs font-medium text-gtf-700 hover:underline"
+                >
+                  todos
+                </button>
+              )}
+              {p.setores.length > 0 && (
+                <button onClick={() => set("setores", [])} className="text-xs font-medium text-gtf-700 hover:underline">
+                  limpar
+                </button>
+              )}
+            </div>
           }
         >
           <div className="space-y-0.5">
