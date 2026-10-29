@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useRef } from "react";
 import { Barras, Cartao, Indicador, Vazio } from "@/components/ui";
+import Logo from "@/components/Logo";
 import {
   SITUACAO_ROTULO,
   TIPO_ROTULO,
@@ -128,6 +129,7 @@ export default function RelatorioCliente({
     <div className="space-y-6">
       {/* Cabeçalho visível apenas na impressão */}
       <div className="so-impressao hidden">
+        <Logo className="mb-3 h-10 w-auto text-gtf-700" />
         <h1 className="text-xl font-bold text-slate-900">
           Relatório de Remanejamentos — GTF Maringá
         </h1>

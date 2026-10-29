@@ -1,4 +1,5 @@
 import AutoPrint from "@/components/AutoPrint";
+import Logo from "@/components/Logo";
 import {
   SITUACAO_ROTULO,
   TIPO_ROTULO,
@@ -73,6 +74,7 @@ export default async function ImprimirRelatorio({
     <div className="mx-auto max-w-4xl px-6 py-8">
       <AutoPrint />
 
+      <Logo className="mb-3 h-10 w-auto text-gtf-700" />
       <h1 className="text-xl font-bold text-slate-900">
         {resumido
           ? "Relatório Resumido de Remanejamentos — GTF Maringá"
