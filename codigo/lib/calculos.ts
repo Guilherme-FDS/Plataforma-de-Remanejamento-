@@ -148,20 +148,43 @@ export function pendenciasAutomaticas(
 export type SituacaoRelatorio = "todos" | "abertos" | "encerrados";
 
 /**
- * Filtro do relatório (setores + situação). Compartilhado entre a tela
- * interativa (client) e a página de impressão (server) — as duas precisam
- * aplicar exatamente o mesmo filtro para o PDF bater com o que a pessoa via
- * na tela antes de mandar imprimir.
+ * Filtro do relatório. Compartilhado entre a tela interativa (client) e a
+ * página de impressão (server) — as duas precisam aplicar exatamente o mesmo
+ * filtro para o PDF bater com o que a pessoa via na tela antes de mandar
+ * imprimir.
  */
 export function filtrarRelatorio(
   todos: Remanejamento[],
-  opcoes: { setores?: string[]; situacao?: SituacaoRelatorio },
+  opcoes: {
+    setores?: string[];
+    situacao?: SituacaoRelatorio;
+    turno?: string;
+    supervisor?: string;
+    /** Início a partir de (AAAA-MM-DD, inclusivo). */
+    de?: string;
+    /** Início até (AAAA-MM-DD, inclusivo). */
+    ate?: string;
+    /** Nome ou código, sem diferenciar acento/maiúscula. */
+    busca?: string;
+  },
   ref: Date = hoje(),
 ): Remanejamento[] {
   const setoresSel = opcoes.setores ?? [];
   const situacaoSel = opcoes.situacao ?? "todos";
+  const busca = normalizar((opcoes.busca ?? "").trim());
   return todos.filter((r) => {
     if (setoresSel.length > 0 && !setoresSel.includes(r.setor ?? ""))
+      return false;
+    if (opcoes.turno && r.turno !== opcoes.turno) return false;
+    if (opcoes.supervisor && r.supervisor !== opcoes.supervisor) return false;
+    // Datas ISO comparam certo como texto.
+    if (opcoes.de && (!r.dataInicio || r.dataInicio < opcoes.de)) return false;
+    if (opcoes.ate && (!r.dataInicio || r.dataInicio > opcoes.ate)) return false;
+    if (
+      busca &&
+      !normalizar(r.nome).includes(busca) &&
+      !String(r.matricula ?? "").includes(busca)
+    )
       return false;
     if (situacaoSel === "abertos") return estaAberto(r, ref);
     if (situacaoSel === "encerrados")
@@ -199,6 +222,114 @@ export function ordenarRelatorio(
         : (ka as number) - (kb as number);
     return cmp * sinal;
   });
+}
+
+export type ModeloRelatorio = "completo" | "resumido";
+
+/** Tudo que define um relatório: filtros, ordem e modelo. */
+export interface ParametrosRelatorio {
+  setores: string[];
+  situacao: SituacaoRelatorio;
+  turno: string;
+  supervisor: string;
+  de: string;
+  ate: string;
+  busca: string;
+  ordem: OrdemCampo;
+  direcao: OrdemDirecao;
+  modelo: ModeloRelatorio;
+}
+
+/** Padrão = relatório de sempre: tudo, início mais recente primeiro. */
+export const RELATORIO_PADRAO: ParametrosRelatorio = {
+  setores: [],
+  situacao: "todos",
+  turno: "",
+  supervisor: "",
+  de: "",
+  ate: "",
+  busca: "",
+  ordem: "inicio",
+  direcao: "desc",
+  modelo: "completo",
+};
+
+const ORDENS: OrdemCampo[] = ["nome", "inicio", "previsao", "codigo"];
+const SITUACOES_RELATORIO: SituacaoRelatorio[] = ["todos", "abertos", "encerrados"];
+const DATA_ISO = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Parâmetros → query string da página de impressão. Junto com
+ * `relatorioDeParams` é o único caminho entre a tela e o PDF: o que um
+ * escreve o outro lê, sem chance de um campo ficar para trás.
+ */
+export function relatorioParaParams(p: ParametrosRelatorio): URLSearchParams {
+  const q = new URLSearchParams();
+  if (p.setores.length > 0) q.set("setores", p.setores.join(","));
+  if (p.situacao !== "todos") q.set("situacao", p.situacao);
+  if (p.turno) q.set("turno", p.turno);
+  if (p.supervisor) q.set("supervisor", p.supervisor);
+  if (p.de) q.set("de", p.de);
+  if (p.ate) q.set("ate", p.ate);
+  if (p.busca.trim()) q.set("busca", p.busca.trim());
+  q.set("ordem", p.ordem);
+  q.set("direcao", p.direcao);
+  if (p.modelo === "resumido") q.set("modelo", "resumido");
+  return q;
+}
+
+/** Query string → parâmetros. Valor inválido cai no padrão. */
+export function relatorioDeParams(
+  q: Record<string, string | undefined>,
+): ParametrosRelatorio {
+  const d = RELATORIO_PADRAO;
+  return {
+    setores: q.setores ? q.setores.split(",").filter(Boolean) : d.setores,
+    situacao: SITUACOES_RELATORIO.includes(q.situacao as SituacaoRelatorio)
+      ? (q.situacao as SituacaoRelatorio)
+      : d.situacao,
+    turno: q.turno ?? d.turno,
+    supervisor: q.supervisor ?? d.supervisor,
+    de: q.de && DATA_ISO.test(q.de) ? q.de : d.de,
+    ate: q.ate && DATA_ISO.test(q.ate) ? q.ate : d.ate,
+    busca: q.busca ?? d.busca,
+    ordem: ORDENS.includes(q.ordem as OrdemCampo) ? (q.ordem as OrdemCampo) : d.ordem,
+    direcao: q.direcao === "asc" ? "asc" : q.direcao === "desc" ? "desc" : d.direcao,
+    modelo: q.modelo === "resumido" ? "resumido" : d.modelo,
+  };
+}
+
+/** Filtra e ordena — a lista exata que a tela mostra e o PDF/XLSX levam. */
+export function montarRelatorio(
+  todos: Remanejamento[],
+  p: ParametrosRelatorio,
+  ref: Date = hoje(),
+): Remanejamento[] {
+  return ordenarRelatorio(filtrarRelatorio(todos, p, ref), p.ordem, p.direcao);
+}
+
+export const ORDEM_ROTULO: Record<OrdemCampo, string> = {
+  nome: "nome",
+  inicio: "data de início",
+  previsao: "previsão de término",
+  codigo: "código",
+};
+
+/** Resumo legível dos parâmetros, para o cabeçalho do PDF. */
+export function descreverRelatorio(p: ParametrosRelatorio): string {
+  const isoBr = (iso: string) => iso.split("-").reverse().join("/");
+  return [
+    p.setores.length > 0 ? `Setores: ${p.setores.join(", ")}` : "Todos os setores",
+    p.situacao === "abertos" ? "Em aberto" : p.situacao === "encerrados" ? "Encerrados" : "Todos",
+    p.turno && `Turno: ${p.turno}`,
+    p.supervisor && `Supervisor: ${p.supervisor}`,
+    (p.de || p.ate) &&
+      `Início: ${p.de ? isoBr(p.de) : "…"} a ${p.ate ? isoBr(p.ate) : "…"}`,
+    p.busca.trim() && `Busca: "${p.busca.trim()}"`,
+    `Ordem: ${ORDEM_ROTULO[p.ordem]} (${p.direcao === "asc" ? "crescente" : "decrescente"})`,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 }
 
 /** Dias até a previsão de término. Negativo = já venceu. */

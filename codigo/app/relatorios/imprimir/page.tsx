@@ -3,17 +3,15 @@ import Logo from "@/components/Logo";
 import {
   SITUACAO_ROTULO,
   TIPO_ROTULO,
+  descreverRelatorio,
   descreverSegmento,
-  filtrarRelatorio,
   formatarData,
   formatarDataObj,
   hoje,
-  ordenarRelatorio,
+  montarRelatorio,
   previsaoFim,
+  relatorioDeParams,
   situacaoDe,
-  type OrdemCampo,
-  type OrdemDirecao,
-  type SituacaoRelatorio,
 } from "@/lib/calculos";
 import { listarRemanejamentos } from "@/lib/dados";
 
@@ -26,49 +24,16 @@ import { listarRemanejamentos } from "@/lib/dados";
 export default async function ImprimirRelatorio({
   searchParams,
 }: {
-  searchParams: {
-    setores?: string;
-    situacao?: string;
-    modelo?: string;
-    ordem?: string;
-    direcao?: string;
-  };
+  searchParams: Record<string, string | undefined>;
 }) {
   const ref = hoje();
   const todos = await listarRemanejamentos();
 
-  const setoresSel = searchParams.setores
-    ? searchParams.setores.split(",").filter(Boolean)
-    : [];
-  const situacaoSel = (searchParams.situacao ?? "todos") as SituacaoRelatorio;
-
-  const CAMPOS: OrdemCampo[] = ["nome", "inicio", "previsao", "codigo"];
-  const ordemCampo = CAMPOS.includes(searchParams.ordem as OrdemCampo)
-    ? (searchParams.ordem as OrdemCampo)
-    : "inicio";
-  const ordemDirecao: OrdemDirecao = searchParams.direcao === "asc" ? "asc" : "desc";
-
-  const filtrados = ordenarRelatorio(
-    filtrarRelatorio(todos, { setores: setoresSel, situacao: situacaoSel }, ref),
-    ordemCampo,
-    ordemDirecao,
-  );
-
-  const resumido = searchParams.modelo === "resumido";
-
-  const descricaoFiltros = [
-    setoresSel.length > 0 ? `Setores: ${setoresSel.join(", ")}` : "Todos os setores",
-    situacaoSel === "abertos"
-      ? "Em aberto"
-      : situacaoSel === "encerrados"
-        ? "Encerrados"
-        : "Todos",
-    `Ordem: ${
-      { nome: "nome", inicio: "data de início", previsao: "previsão de término", codigo: "código" }[
-        ordemCampo
-      ]
-    } (${ordemDirecao === "asc" ? "crescente" : "decrescente"})`,
-  ].join(" · ");
+  // Mesma leitura e mesma montagem da tela de Relatórios.
+  const parametros = relatorioDeParams(searchParams);
+  const filtrados = montarRelatorio(todos, parametros, ref);
+  const resumido = parametros.modelo === "resumido";
+  const descricaoFiltros = descreverRelatorio(parametros);
 
   return (
     <div className="mx-auto max-w-4xl px-6 py-8">

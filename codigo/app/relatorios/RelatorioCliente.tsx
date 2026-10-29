@@ -1,61 +1,101 @@
 "use client";
 
-import { useMemo, useState, useRef } from "react";
-import { Barras, Cartao, Indicador, Vazio } from "@/components/ui";
-import Logo from "@/components/Logo";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Vazio } from "@/components/ui";
 import {
+  RELATORIO_PADRAO,
   SITUACAO_ROTULO,
   TIPO_ROTULO,
-  contarPor,
   descreverSegmento,
-  estaAberto,
-  filtrarRelatorio,
   formatarData,
   formatarDataObj,
   hoje,
-  ordenarRelatorio,
+  montarRelatorio,
   previsaoFim,
+  relatorioParaParams,
   situacaoDe,
   type OrdemCampo,
-  type OrdemDirecao,
+  type ParametrosRelatorio,
   type SituacaoRelatorio,
 } from "@/lib/calculos";
 import type { Remanejamento } from "@/lib/tipos";
 
+const ORDENS: { v: OrdemCampo; r: string }[] = [
+  { v: "inicio", r: "Data de início" },
+  { v: "previsao", r: "Previsão de término" },
+  { v: "nome", r: "Nome" },
+  { v: "codigo", r: "Código" },
+];
+
+const SITUACOES: { v: SituacaoRelatorio; r: string }[] = [
+  { v: "todos", r: "Todos" },
+  { v: "abertos", r: "Abertos" },
+  { v: "encerrados", r: "Encerrados" },
+];
+
+/** Valores distintos de um campo, com quantos registros cada um tem. */
+function contagem(todos: Remanejamento[], campo: (r: Remanejamento) => string | null) {
+  const m = new Map<string, number>();
+  for (const r of todos) {
+    const v = campo(r);
+    if (v) m.set(v, (m.get(v) ?? 0) + 1);
+  }
+  return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0], "pt-BR"));
+}
+
+/**
+ * Relatórios — layout "painel lateral": filtros à esquerda aplicam na hora,
+ * tabela à direita, e a barra acima da tabela exporta exatamente a lista
+ * que está na tela. Os parâmetros ficam na URL (recarregar ou compartilhar
+ * o link mantém o relatório) e o PDF é um link montado a partir deles pela
+ * mesma função que a página de impressão usa para ler.
+ */
 export default function RelatorioCliente({
   todos,
-  setores,
+  inicial,
 }: {
   todos: Remanejamento[];
-  setores: string[];
+  inicial: ParametrosRelatorio;
 }) {
   const refObj = useRef(hoje());
   const ref = refObj.current;
-  const [setoresSel, setSetoresSel] = useState<string[]>([]);
-  const [situacaoSel, setSituacaoSel] = useState<SituacaoRelatorio>("todos");
-  const [formatoExport, setFormatoExport] = useState<"xlsx" | "pdf">("xlsx");
-  const [modelo, setModelo] = useState<"completo" | "resumido">("completo");
-  const resumido = modelo === "resumido";
-  // Padrão = ordem de sempre (início mais recente primeiro).
-  const [ordemCampo, setOrdemCampo] = useState<OrdemCampo>("inicio");
-  const [ordemDirecao, setOrdemDirecao] = useState<OrdemDirecao>("desc");
+  const [p, setP] = useState<ParametrosRelatorio>(inicial);
+  const [filtrosAbertos, setFiltrosAbertos] = useState(false);
 
-  const filtrados = useMemo(
-    () =>
-      ordenarRelatorio(
-        filtrarRelatorio(todos, { setores: setoresSel, situacao: situacaoSel }, ref),
-        ordemCampo,
-        ordemDirecao,
-      ),
-    [todos, setoresSel, situacaoSel, ref, ordemCampo, ordemDirecao],
-  );
+  const set = <K extends keyof ParametrosRelatorio>(k: K, v: ParametrosRelatorio[K]) =>
+    setP((atual) => ({ ...atual, [k]: v }));
 
-  const abertos = filtrados.filter((r) => estaAberto(r, ref));
+  const lista = useMemo(() => montarRelatorio(todos, p, ref), [todos, p, ref]);
+  const query = relatorioParaParams(p).toString();
+  const resumido = p.modelo === "resumido";
+
+  // Mantém a URL em dia sem gerar histórico a cada clique.
+  useEffect(() => {
+    window.history.replaceState(null, "", `/relatorios?${query}`);
+  }, [query]);
+
+  const setores = useMemo(() => contagem(todos, (r) => r.setor), [todos]);
+  const turnos = useMemo(() => contagem(todos, (r) => r.turno), [todos]);
+  const supervisores = useMemo(() => contagem(todos, (r) => r.supervisor), [todos]);
+
+  const filtrosAtivos =
+    p.setores.length +
+    (p.situacao !== "todos" ? 1 : 0) +
+    (p.turno ? 1 : 0) +
+    (p.supervisor ? 1 : 0) +
+    (p.de || p.ate ? 1 : 0) +
+    (p.busca.trim() ? 1 : 0);
 
   function toggleSetor(s: string) {
-    setSetoresSel((prev) =>
-      prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s],
+    set(
+      "setores",
+      p.setores.includes(s) ? p.setores.filter((x) => x !== s) : [...p.setores, s],
     );
+  }
+
+  function limparFiltros() {
+    // Limpa só filtros; ordem e modelo são preferência de quem está usando.
+    setP((atual) => ({ ...RELATORIO_PADRAO, ordem: atual.ordem, direcao: atual.direcao, modelo: atual.modelo }));
   }
 
   async function exportarXLSX() {
@@ -63,268 +103,86 @@ export default function RelatorioCliente({
     // exporta, em vez de pesar o carregamento inicial de Relatórios.
     const XLSX = await import("xlsx");
 
-    const linhas = filtrados.map((r) => ({
-      Nome: r.nome,
-      Matrícula: r.matricula ?? "",
-      Setor: r.setor ?? "",
-      Turno: r.turno ?? "",
-      Início: formatarData(r.dataInicio),
-      Situação: SITUACAO_ROTULO[situacaoDe(r, ref)],
-      Segmento: descreverSegmento(r),
-      Tipo: TIPO_ROTULO[r.tipo],
-      "Previsão Fim": formatarDataObj(previsaoFim(r)),
-      Encerramento: formatarData(r.dataEncerramento),
-      Causa: r.causa ?? "",
-      Contraindicação: r.contraindicacao ?? "",
-    }));
+    const linhas = resumido
+      ? lista.map((r) => ({
+          Nome: r.nome,
+          Setor: r.setor ?? "",
+          Turno: r.turno ?? "",
+          Código: r.matricula ?? "",
+          "Previsão Término": formatarDataObj(previsaoFim(r)),
+          Supervisor: r.supervisor ?? "",
+        }))
+      : lista.map((r) => ({
+          Nome: r.nome,
+          Matrícula: r.matricula ?? "",
+          Setor: r.setor ?? "",
+          Turno: r.turno ?? "",
+          Início: formatarData(r.dataInicio),
+          Situação: SITUACAO_ROTULO[situacaoDe(r, ref)],
+          Segmento: descreverSegmento(r),
+          Tipo: TIPO_ROTULO[r.tipo],
+          "Previsão Fim": formatarDataObj(previsaoFim(r)),
+          Encerramento: formatarData(r.dataEncerramento),
+          Causa: r.causa ?? "",
+          Contraindicação: r.contraindicacao ?? "",
+        }));
 
     const planilha = XLSX.utils.json_to_sheet(linhas);
     const livro = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(livro, planilha, "Relatório");
-    XLSX.writeFile(livro, `relatorio_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    XLSX.utils.book_append_sheet(livro, planilha, resumido ? "Resumido" : "Relatório");
+    const data = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(livro, `relatorio${resumido ? "_resumido" : ""}_${data}.xlsx`);
   }
 
-  // Relatório resumido: só identificação, previsão de término e supervisor.
-  async function exportarResumidoXLSX() {
-    const XLSX = await import("xlsx");
-
-    const linhas = filtrados.map((r) => ({
-      Nome: r.nome,
-      Setor: r.setor ?? "",
-      Turno: r.turno ?? "",
-      Código: r.matricula ?? "",
-      "Previsão Término": formatarDataObj(previsaoFim(r)),
-      Supervisor: r.supervisor ?? "",
-    }));
-
-    const planilha = XLSX.utils.json_to_sheet(linhas);
-    const livro = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(livro, planilha, "Resumido");
-    XLSX.writeFile(livro, `relatorio_resumido_${new Date().toISOString().slice(0, 10)}.xlsx`);
-  }
-
-  function abrirImpressao() {
-    const params = new URLSearchParams();
-    if (setoresSel.length > 0) params.set("setores", setoresSel.join(","));
-    if (situacaoSel !== "todos") params.set("situacao", situacaoSel);
-    if (resumido) params.set("modelo", "resumido");
-    params.set("ordem", ordemCampo);
-    params.set("direcao", ordemDirecao);
-    window.open(`/relatorios/imprimir?${params.toString()}`, "_blank");
-  }
-
-  const dataGeracao = formatarDataObj(ref);
-  const descricaoFiltros = [
-    setoresSel.length > 0
-      ? `Setores: ${setoresSel.join(", ")}`
-      : "Todos os setores",
-    situacaoSel === "abertos"
-      ? "Em aberto"
-      : situacaoSel === "encerrados"
-        ? "Encerrados"
-        : "Todos",
-  ].join(" · ");
+  const vazio = lista.length === 0;
 
   return (
-    <div className="space-y-6">
-      {/* Cabeçalho visível apenas na impressão */}
-      <div className="so-impressao hidden">
-        <Logo className="mb-3 h-10 w-auto text-gtf-700" />
-        <h1 className="text-xl font-bold text-slate-900">
-          Relatório de Remanejamentos — GTF Maringá
-        </h1>
-        <p className="mt-1 text-sm text-slate-600">
-          Gerado em {dataGeracao} · {descricaoFiltros} · {filtrados.length} registros
-        </p>
-        <hr className="mt-3 border-slate-300" />
-      </div>
-
-      {/* Filtros — ocultos na impressão */}
-      <div className="sem-impressao">
-        <Cartao titulo="Filtros">
-          <div className="px-5 py-4 space-y-4">
-            <div>
-              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
-                Setores
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {setores.map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => toggleSetor(s)}
-                    className={`rounded-full border px-3 py-1 text-sm transition ${
-                      setoresSel.includes(s)
-                        ? "border-gtf-700 bg-gtf-700 text-white"
-                        : "border-slate-300 bg-white text-slate-600 hover:border-slate-400"
-                    }`}
-                  >
-                    {s}
-                  </button>
-                ))}
-                {setoresSel.length > 0 && (
-                  <button
-                    onClick={() => setSetoresSel([])}
-                    className="text-xs text-slate-500 hover:text-slate-700"
-                  >
-                    Limpar
-                  </button>
-                )}
-              </div>
-            </div>
-
-            <div>
-              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
-                Situação
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {(
-                  [
-                    { v: "todos", r: "Todos" },
-                    { v: "abertos", r: "Em aberto" },
-                    { v: "encerrados", r: "Encerrados" },
-                  ] as { v: SituacaoRelatorio; r: string }[]
-                ).map((o) => (
-                  <button
-                    key={o.v}
-                    onClick={() => setSituacaoSel(o.v)}
-                    className={`rounded-full border px-3 py-1 text-sm transition ${
-                      situacaoSel === o.v
-                        ? "border-gtf-700 bg-gtf-700 text-white"
-                        : "border-slate-300 bg-white text-slate-600 hover:border-slate-400"
-                    }`}
-                  >
-                    {o.r}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
-                Ordenar por
-              </p>
-              <div className="flex flex-wrap items-center gap-2">
-                {(
-                  [
-                    { v: "nome", r: "Nome" },
-                    { v: "inicio", r: "Data de início" },
-                    { v: "previsao", r: "Previsão de término" },
-                    { v: "codigo", r: "Código" },
-                  ] as { v: OrdemCampo; r: string }[]
-                ).map((o) => (
-                  <button
-                    key={o.v}
-                    onClick={() => setOrdemCampo(o.v)}
-                    className={`rounded-full border px-3 py-1 text-sm transition ${
-                      ordemCampo === o.v
-                        ? "border-gtf-700 bg-gtf-700 text-white"
-                        : "border-slate-300 bg-white text-slate-600 hover:border-slate-400"
-                    }`}
-                  >
-                    {o.r}
-                  </button>
-                ))}
-                <span className="mx-1 h-5 w-px bg-slate-200" aria-hidden />
-                {(
-                  [
-                    { v: "asc", r: "Crescente" },
-                    { v: "desc", r: "Decrescente" },
-                  ] as { v: OrdemDirecao; r: string }[]
-                ).map((o) => (
-                  <button
-                    key={o.v}
-                    onClick={() => setOrdemDirecao(o.v)}
-                    className={`rounded-full border px-3 py-1 text-sm transition ${
-                      ordemDirecao === o.v
-                        ? "border-gtf-700 bg-gtf-700 text-white"
-                        : "border-slate-300 bg-white text-slate-600 hover:border-slate-400"
-                    }`}
-                  >
-                    {o.r}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </Cartao>
-      </div>
-
-      {/* Totalizadores */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <Indicador rotulo="Registros" valor={filtrados.length} />
-        <Indicador
-          rotulo="Em aberto"
-          valor={abertos.length}
-          destaque={abertos.length > 0 ? "atencao" : undefined}
+    <div className="grid gap-4 lg:grid-cols-[16rem_minmax(0,1fr)] lg:items-start">
+      {/* Fundo escuro da gaveta de filtros (só celular/tablet) */}
+      {filtrosAbertos && (
+        <div
+          className="fixed inset-0 z-40 bg-slate-900/30 lg:hidden"
+          onClick={() => setFiltrosAbertos(false)}
+          aria-hidden
         />
-        <Indicador
-          rotulo="Encerrados"
-          valor={filtrados.filter((r) => r.dataEncerramento).length}
-        />
-        <Indicador
-          rotulo="Setores"
-          valor={
-            new Set(filtrados.map((r) => r.setor).filter(Boolean)).size
-          }
-        />
-      </div>
+      )}
 
-      {/* Gráficos BI — ocultos na impressão */}
-      <div className="graficos-impressao grid gap-6 lg:grid-cols-3">
-        <Cartao titulo="Por setor">
-          {filtrados.length === 0 ? (
-            <Vazio>Sem dados.</Vazio>
-          ) : (
-            <Barras
-              itens={contarPor(filtrados, (r) => r.setor)}
-              href={(s) =>
-                `/remanejamentos?setor=${encodeURIComponent(s)}`
-              }
-            />
-          )}
-        </Cartao>
-        <Cartao titulo="Por região do corpo">
-          {filtrados.length === 0 ? (
-            <Vazio>Sem dados.</Vazio>
-          ) : (
-            <Barras
-              itens={contarPor(filtrados, (r) => r.regiao)}
-              href={(r) =>
-                `/remanejamentos?regiao=${encodeURIComponent(r)}`
-              }
-            />
-          )}
-        </Cartao>
-        <Cartao titulo="Por tipo">
-          {filtrados.length === 0 ? (
-            <Vazio>Sem dados.</Vazio>
-          ) : (
-            <Barras
-              itens={contarPor(filtrados, (r) => TIPO_ROTULO[r.tipo])}
-            />
-          )}
-        </Cartao>
-      </div>
-
-      {/* Tabela + botões de ação */}
-      <Cartao
-        titulo={`Colaboradores — ${filtrados.length} registro${filtrados.length !== 1 ? "s" : ""}`}
+      {/* ------------------------------------------------------ filtros */}
+      <aside
+        className={`sem-impressao fixed inset-y-0 left-0 z-50 w-72 overflow-y-auto bg-white shadow-xl transition-transform lg:sticky lg:bottom-auto lg:top-20 lg:z-auto lg:max-h-[calc(100vh-6rem)] lg:w-auto lg:translate-x-0 lg:rounded-xl lg:border lg:border-slate-200 lg:shadow-none ${
+          filtrosAbertos ? "translate-x-0" : "-translate-x-full"
+        }`}
+        aria-label="Filtros do relatório"
       >
-        <div className="sem-impressao flex flex-wrap items-center justify-end gap-3 px-5 py-3 border-b border-slate-100">
-          {/* Seletor de modelo */}
-          <div className="flex rounded-md border border-slate-200 overflow-hidden text-sm">
-            {(
-              [
-                { v: "completo", r: "Completo" },
-                { v: "resumido", r: "Resumido" },
-              ] as const
-            ).map((o) => (
+        <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3 lg:hidden">
+          <span className="text-sm font-semibold text-slate-900">Filtros</span>
+          <button
+            onClick={() => setFiltrosAbertos(false)}
+            className="rounded-md px-2 py-1 text-sm text-slate-500 hover:bg-slate-100"
+          >
+            Fechar
+          </button>
+        </div>
+
+        <Grupo titulo="Buscar">
+          <input
+            type="search"
+            value={p.busca}
+            onChange={(e) => set("busca", e.target.value)}
+            placeholder="Nome ou código"
+            className="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm focus:border-gtf-600 focus:outline-none focus:ring-2 focus:ring-gtf-100"
+          />
+        </Grupo>
+
+        <Grupo titulo="Situação">
+          <div className="flex overflow-hidden rounded-md border border-slate-200 text-sm">
+            {SITUACOES.map((o) => (
               <button
                 key={o.v}
-                onClick={() => setModelo(o.v)}
-                className={`px-3 py-1.5 font-medium transition ${
-                  modelo === o.v
-                    ? "bg-slate-800 text-white"
+                onClick={() => set("situacao", o.v)}
+                className={`flex-1 px-2 py-1.5 font-medium transition ${
+                  p.situacao === o.v
+                    ? "bg-gtf-700 text-white"
                     : "bg-white text-slate-600 hover:bg-slate-50"
                 }`}
               >
@@ -332,73 +190,205 @@ export default function RelatorioCliente({
               </button>
             ))}
           </div>
-          {/* Seletor de formato */}
-          <div className="flex rounded-md border border-slate-200 overflow-hidden text-sm">
-            {(["xlsx", "pdf"] as const).map((f) => (
+        </Grupo>
+
+        <Grupo
+          titulo="Setores"
+          acao={
+            p.setores.length > 0 && (
+              <button onClick={() => set("setores", [])} className="text-xs font-medium text-gtf-700 hover:underline">
+                limpar
+              </button>
+            )
+          }
+        >
+          <div className="space-y-0.5">
+            {setores.map(([s, n]) => (
+              <label key={s} className="flex cursor-pointer items-center gap-2 py-0.5 text-sm text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={p.setores.includes(s)}
+                  onChange={() => toggleSetor(s)}
+                  className="h-4 w-4 rounded border-slate-300 text-gtf-700 focus:ring-gtf-500"
+                />
+                <span className="min-w-0 flex-1 truncate">{s}</span>
+                <span className="text-xs tabular-nums text-slate-400">{n}</span>
+              </label>
+            ))}
+          </div>
+        </Grupo>
+
+        <Grupo titulo="Turno">
+          <div className="flex flex-wrap gap-1.5">
+            {[["", "Todos"] as const, ...turnos.map(([t]) => [t, t] as const)].map(([v, r]) => (
               <button
-                key={f}
-                onClick={() => setFormatoExport(f)}
-                className={`px-3 py-1.5 font-medium transition ${
-                  formatoExport === f
-                    ? "bg-slate-800 text-white"
-                    : "bg-white text-slate-600 hover:bg-slate-50"
+                key={v || "todos"}
+                onClick={() => set("turno", v)}
+                className={`rounded-full border px-3 py-0.5 text-sm transition ${
+                  p.turno === v
+                    ? "border-gtf-700 bg-gtf-700 text-white"
+                    : "border-slate-300 bg-white text-slate-600 hover:border-slate-400"
                 }`}
               >
-                {f.toUpperCase()}
+                {r}
               </button>
             ))}
           </div>
-          <button
-            onClick={() =>
-              formatoExport === "pdf"
-                ? abrirImpressao()
-                : resumido
-                  ? exportarResumidoXLSX()
-                  : exportarXLSX()
-            }
-            disabled={filtrados.length === 0}
-            className="rounded-md bg-gtf-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-gtf-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+        </Grupo>
+
+        <Grupo titulo="Supervisor">
+          <select
+            value={p.supervisor}
+            onChange={(e) => set("supervisor", e.target.value)}
+            className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm focus:border-gtf-600 focus:outline-none focus:ring-2 focus:ring-gtf-100"
           >
-            {formatoExport === "xlsx" ? "Exportar XLSX" : "Gerar PDF"}
-            {resumido ? " resumido" : ""}
+            <option value="">Todos</option>
+            {supervisores.map(([s, n]) => (
+              <option key={s} value={s}>
+                {s} ({n})
+              </option>
+            ))}
+          </select>
+        </Grupo>
+
+        <Grupo titulo="Início entre">
+          <div className="grid gap-1.5">
+            <input
+              type="date"
+              value={p.de}
+              max={p.ate || undefined}
+              onChange={(e) => set("de", e.target.value)}
+              aria-label="Início a partir de"
+              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+            />
+            <input
+              type="date"
+              value={p.ate}
+              min={p.de || undefined}
+              onChange={(e) => set("ate", e.target.value)}
+              aria-label="Início até"
+              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+            />
+          </div>
+        </Grupo>
+
+        <div className="px-4 py-3">
+          <button
+            onClick={limparFiltros}
+            disabled={filtrosAtivos === 0}
+            className="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Limpar filtros
           </button>
         </div>
+      </aside>
 
-        {filtrados.length === 0 ? (
+      {/* ------------------------------------------------------ resultado */}
+      <section className="min-w-0 rounded-xl border border-slate-200 bg-white">
+        <div className="sem-impressao sticky top-14 z-20 flex flex-wrap items-center gap-2 rounded-t-xl border-b border-slate-200 bg-white px-4 py-2.5 sm:top-16">
+          <button
+            onClick={() => setFiltrosAbertos(true)}
+            className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 lg:hidden"
+          >
+            Filtros{filtrosAtivos > 0 ? ` (${filtrosAtivos})` : ""}
+          </button>
+
+          <p className="mr-auto text-sm text-slate-500">
+            <strong className="font-semibold tabular-nums text-slate-900">{lista.length}</strong>{" "}
+            registro{lista.length !== 1 ? "s" : ""}
+          </p>
+
+          <div className="flex overflow-hidden rounded-md border border-slate-200 text-sm">
+            {(["completo", "resumido"] as const).map((m) => (
+              <button
+                key={m}
+                onClick={() => set("modelo", m)}
+                className={`px-3 py-1.5 font-medium capitalize transition ${
+                  p.modelo === m ? "bg-gtf-700 text-white" : "bg-white text-slate-600 hover:bg-slate-50"
+                }`}
+              >
+                {m}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-1">
+            <select
+              value={p.ordem}
+              onChange={(e) => set("ordem", e.target.value as OrdemCampo)}
+              aria-label="Ordenar por"
+              className="rounded-md border border-slate-300 py-1.5 pl-2 pr-7 text-sm"
+            >
+              {ORDENS.map((o) => (
+                <option key={o.v} value={o.v}>
+                  {o.r}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={() => set("direcao", p.direcao === "asc" ? "desc" : "asc")}
+              title={p.direcao === "asc" ? "Crescente — clique para inverter" : "Decrescente — clique para inverter"}
+              aria-label={p.direcao === "asc" ? "Ordem crescente" : "Ordem decrescente"}
+              className="flex h-[34px] items-center gap-1 rounded-md border border-slate-300 px-2 text-sm text-slate-600 hover:bg-slate-50"
+            >
+              {p.direcao === "asc" ? "↑" : "↓"}
+              <span className="hidden sm:inline">{p.direcao === "asc" ? "Cresc." : "Decresc."}</span>
+            </button>
+          </div>
+
+          <button
+            onClick={exportarXLSX}
+            disabled={vazio}
+            className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            XLSX
+          </button>
+          {/* Link real (não window.open num clique): o PDF abre com os
+              parâmetros que estão na tela neste instante. */}
+          <a
+            href={`/relatorios/imprimir?${query}`}
+            target="_blank"
+            rel="noopener"
+            aria-disabled={vazio}
+            onClick={(e) => vazio && e.preventDefault()}
+            className={`rounded-md px-4 py-1.5 text-sm font-medium text-white transition ${
+              vazio ? "pointer-events-none bg-slate-300" : "bg-gtf-700 hover:bg-gtf-800"
+            }`}
+          >
+            Gerar PDF
+          </a>
+        </div>
+
+        {vazio ? (
           <Vazio>Nenhum registro com esses filtros.</Vazio>
         ) : resumido ? (
           <div className="rolagem-x">
             <table className="w-full min-w-[44rem] text-sm">
               <thead>
                 <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
-                  <th className="px-5 py-2.5 font-medium">Colaborador</th>
+                  <th className="px-4 py-2.5 font-medium">Colaborador</th>
                   <th className="px-3 py-2.5 font-medium">Setor</th>
                   <th className="px-3 py-2.5 font-medium">Turno</th>
                   <th className="px-3 py-2.5 font-medium">Código</th>
                   <th className="px-3 py-2.5 font-medium">Previsão término</th>
-                  <th className="px-5 py-2.5 font-medium">Supervisor</th>
+                  <th className="px-4 py-2.5 font-medium">Supervisor</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filtrados.map((r) => (
+                {lista.map((r) => (
                   <tr key={r.id} className="align-top hover:bg-slate-50">
-                    <td className="px-5 py-3">
-                      <a
-                        href={`/colaboradores/${r.colaboradorId}`}
-                        className="font-medium text-slate-900 hover:underline"
-                      >
+                    <td className="px-4 py-2.5">
+                      <a href={`/colaboradores/${r.colaboradorId}`} className="font-medium text-slate-900 hover:underline">
                         {r.nome}
                       </a>
                     </td>
-                    <td className="px-3 py-3 text-slate-600">{r.setor ?? "—"}</td>
-                    <td className="px-3 py-3 text-slate-600">{r.turno ?? "—"}</td>
-                    <td className="px-3 py-3 tabular-nums text-slate-600">
-                      {r.matricula ?? "—"}
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-3 tabular-nums text-slate-600">
+                    <td className="px-3 py-2.5 text-slate-600">{r.setor ?? "—"}</td>
+                    <td className="px-3 py-2.5 text-slate-600">{r.turno ?? "—"}</td>
+                    <td className="px-3 py-2.5 tabular-nums text-slate-600">{r.matricula ?? "—"}</td>
+                    <td className="whitespace-nowrap px-3 py-2.5 tabular-nums text-slate-600">
                       {formatarDataObj(previsaoFim(r))}
                     </td>
-                    <td className="px-5 py-3 text-slate-600">{r.supervisor ?? "—"}</td>
+                    <td className="px-4 py-2.5 text-slate-600">{r.supervisor ?? "—"}</td>
                   </tr>
                 ))}
               </tbody>
@@ -409,54 +399,42 @@ export default function RelatorioCliente({
             <table className="w-full min-w-[52rem] text-sm">
               <thead>
                 <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
-                  <th className="px-5 py-2.5 font-medium">Colaborador</th>
+                  <th className="px-4 py-2.5 font-medium">Colaborador</th>
                   <th className="px-3 py-2.5 font-medium">Setor / Turno</th>
                   <th className="px-3 py-2.5 font-medium">Segmento</th>
                   <th className="px-3 py-2.5 font-medium">Início</th>
                   <th className="px-3 py-2.5 font-medium">Previsão</th>
-                  <th className="px-5 py-2.5 font-medium">Situação</th>
+                  <th className="px-4 py-2.5 font-medium">Situação</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filtrados.map((r) => {
-                  const fim = previsaoFim(r);
+                {lista.map((r) => {
                   const sit = situacaoDe(r, ref);
                   return (
                     <tr key={r.id} className="align-top hover:bg-slate-50">
-                      <td className="px-5 py-3">
-                        <a
-                          href={`/colaboradores/${r.colaboradorId}`}
-                          className="font-medium text-slate-900 hover:underline"
-                        >
+                      <td className="px-4 py-2.5">
+                        <a href={`/colaboradores/${r.colaboradorId}`} className="font-medium text-slate-900 hover:underline">
                           {r.nome}
                         </a>
-                        <p className="text-xs text-slate-500">
-                          {r.matricula ?? "—"}
-                        </p>
+                        <p className="text-xs text-slate-500">{r.matricula ?? "—"}</p>
                       </td>
-                      <td className="px-3 py-3 text-slate-600">
+                      <td className="px-3 py-2.5 text-slate-600">
                         {r.setor ?? "—"}
-                        <p className="text-xs text-slate-500">
-                          {r.turno ?? "—"}
-                        </p>
+                        <p className="text-xs text-slate-500">{r.turno ?? "—"}</p>
                       </td>
-                      <td className="px-3 py-3 text-slate-600">
+                      <td className="px-3 py-2.5 text-slate-600">
                         {descreverSegmento(r)}
-                        {r.causa && (
-                          <p className="max-w-40 truncate text-xs text-slate-500">
-                            {r.causa}
-                          </p>
-                        )}
+                        {r.causa && <p className="max-w-40 truncate text-xs text-slate-500">{r.causa}</p>}
                       </td>
-                      <td className="whitespace-nowrap px-3 py-3 tabular-nums text-slate-600">
+                      <td className="whitespace-nowrap px-3 py-2.5 tabular-nums text-slate-600">
                         {formatarData(r.dataInicio)}
                       </td>
-                      <td className="whitespace-nowrap px-3 py-3 tabular-nums text-slate-600">
-                        {formatarDataObj(fim)}
+                      <td className="whitespace-nowrap px-3 py-2.5 tabular-nums text-slate-600">
+                        {formatarDataObj(previsaoFim(r))}
                       </td>
-                      <td className="px-5 py-3">
+                      <td className="px-4 py-2.5">
                         <span
-                          className={`badge-impressao inline-flex whitespace-nowrap rounded-md px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${
+                          className={`inline-flex whitespace-nowrap rounded-md px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${
                             sit === "a_encerrar"
                               ? "bg-amber-50 text-amber-800 ring-amber-600/30"
                               : sit === "encerrado"
@@ -478,7 +456,27 @@ export default function RelatorioCliente({
             </table>
           </div>
         )}
-      </Cartao>
+      </section>
+    </div>
+  );
+}
+
+function Grupo({
+  titulo,
+  acao,
+  children,
+}: {
+  titulo: string;
+  acao?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <div className="border-b border-slate-100 px-4 py-3">
+      <div className="mb-2 flex items-center justify-between">
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{titulo}</p>
+        {acao}
+      </div>
+      {children}
     </div>
   );
 }

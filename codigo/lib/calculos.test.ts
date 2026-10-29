@@ -13,8 +13,13 @@ import { describe, expect, it } from "vitest";
 import {
   estaAberto,
   estatisticaDuracao,
+  RELATORIO_PADRAO,
+  filtrarRelatorio,
   incidenciaPorSetor,
+  montarRelatorio,
   ordenarRelatorio,
+  relatorioDeParams,
+  relatorioParaParams,
   situacaoDe,
 } from "./calculos";
 import type { Remanejamento } from "./tipos";
@@ -193,5 +198,70 @@ describe("ordenarRelatorio()", () => {
     expect(ids(ordenarRelatorio(itens, "codigo", "desc"))).toEqual([1, 3, 2]);
     expect(ids(ordenarRelatorio(itens, "previsao", "asc"))).toEqual([1, 3, 2]);
     expect(ids(ordenarRelatorio(itens, "previsao", "desc"))).toEqual([3, 1, 2]);
+  });
+});
+
+describe("parâmetros do relatório (tela → PDF)", () => {
+  it("ida e volta pela query string preserva tudo", () => {
+    const p = {
+      ...RELATORIO_PADRAO,
+      setores: ["Evisceração", "Plataforma"],
+      situacao: "abertos" as const,
+      turno: "2º",
+      supervisor: "Jeferson",
+      de: "2026-01-01",
+      ate: "2026-10-29",
+      busca: "silva",
+      ordem: "previsao" as const,
+      direcao: "desc" as const,
+      modelo: "resumido" as const,
+    };
+    const q = Object.fromEntries(relatorioParaParams(p));
+    expect(relatorioDeParams(q)).toEqual(p);
+  });
+
+  it("ordem e direção sempre vão na URL, mesmo no padrão", () => {
+    const q = relatorioParaParams(RELATORIO_PADRAO);
+    expect(q.get("ordem")).toBe("inicio");
+    expect(q.get("direcao")).toBe("desc");
+  });
+
+  it("valor inválido cai no padrão", () => {
+    expect(relatorioDeParams({ ordem: "x", direcao: "y", de: "29/10/2026" })).toEqual(
+      RELATORIO_PADRAO,
+    );
+  });
+
+  it("previsão decrescente põe sem previsão no fim (caso do PDF reportado)", () => {
+    const itens: Remanejamento[] = [
+      { ...BASE, id: 1, dataInicio: "2026-10-20", dataPrevistaFim: null, duracaoTipo: "permanente", duracaoDias: null },
+      { ...BASE, id: 2, dataInicio: "2026-10-01", dataPrevistaFim: "2026-11-05" },
+      { ...BASE, id: 3, dataInicio: "2026-09-01", dataPrevistaFim: "2027-01-20" },
+    ];
+    const r = montarRelatorio(itens, { ...RELATORIO_PADRAO, ordem: "previsao", direcao: "desc" }, REF);
+    expect(r.map((x) => x.id)).toEqual([3, 2, 1]);
+  });
+});
+
+describe("filtrarRelatorio() — filtros novos", () => {
+  const itens: Remanejamento[] = [
+    { ...BASE, id: 1, nome: "João da Silva", matricula: 111, turno: "1º", supervisor: "Ana", dataInicio: "2026-03-01" },
+    { ...BASE, id: 2, nome: "Maria Souza", matricula: 222, turno: "2º", supervisor: "Beto", dataInicio: "2026-05-10" },
+  ];
+  const ids = (l: Remanejamento[]) => l.map((r) => r.id);
+
+  it("turno e supervisor", () => {
+    expect(ids(filtrarRelatorio(itens, { turno: "2º" }, REF))).toEqual([2]);
+    expect(ids(filtrarRelatorio(itens, { supervisor: "Ana" }, REF))).toEqual([1]);
+  });
+
+  it("período de início inclusivo", () => {
+    expect(ids(filtrarRelatorio(itens, { de: "2026-05-10" }, REF))).toEqual([2]);
+    expect(ids(filtrarRelatorio(itens, { ate: "2026-03-01" }, REF))).toEqual([1]);
+  });
+
+  it("busca por nome sem acento e por código", () => {
+    expect(ids(filtrarRelatorio(itens, { busca: "JOAO" }, REF))).toEqual([1]);
+    expect(ids(filtrarRelatorio(itens, { busca: "222" }, REF))).toEqual([2]);
   });
 });
