@@ -70,10 +70,30 @@ export default function RelatorioCliente({
     XLSX.writeFile(livro, `relatorio_${new Date().toISOString().slice(0, 10)}.xlsx`);
   }
 
-  function abrirImpressao() {
+  // Relatório resumido: só identificação, previsão de término e supervisor.
+  async function exportarResumidoXLSX() {
+    const XLSX = await import("xlsx");
+
+    const linhas = filtrados.map((r) => ({
+      Nome: r.nome,
+      Setor: r.setor ?? "",
+      Turno: r.turno ?? "",
+      Código: r.matricula ?? "",
+      "Previsão Término": formatarDataObj(previsaoFim(r)),
+      Supervisor: r.supervisor ?? "",
+    }));
+
+    const planilha = XLSX.utils.json_to_sheet(linhas);
+    const livro = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(livro, planilha, "Resumido");
+    XLSX.writeFile(livro, `relatorio_resumido_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  }
+
+  function abrirImpressao(modelo?: "resumido") {
     const params = new URLSearchParams();
     if (setoresSel.length > 0) params.set("setores", setoresSel.join(","));
     if (situacaoSel !== "todos") params.set("situacao", situacaoSel);
+    if (modelo) params.set("modelo", modelo);
     window.open(`/relatorios/imprimir?${params.toString()}`, "_blank");
   }
 
@@ -219,6 +239,34 @@ export default function RelatorioCliente({
               itens={contarPor(filtrados, (r) => TIPO_ROTULO[r.tipo])}
             />
           )}
+        </Cartao>
+      </div>
+
+      {/* Relatório resumido — mesmos filtros, colunas reduzidas */}
+      <div className="sem-impressao">
+        <Cartao titulo="Relatório resumido">
+          <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
+            <p className="text-sm text-slate-600">
+              Nome, setor, turno, código, previsão de término e supervisor ·{" "}
+              {filtrados.length} registro{filtrados.length !== 1 ? "s" : ""}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={exportarResumidoXLSX}
+                disabled={filtrados.length === 0}
+                className="rounded-md border border-gtf-700 px-4 py-2 text-sm font-medium text-gtf-700 transition hover:bg-gtf-50 disabled:cursor-not-allowed disabled:border-slate-300 disabled:text-slate-400"
+              >
+                Exportar XLSX
+              </button>
+              <button
+                onClick={() => abrirImpressao("resumido")}
+                disabled={filtrados.length === 0}
+                className="rounded-md bg-gtf-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-gtf-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+              >
+                Gerar PDF
+              </button>
+            </div>
+          </div>
         </Cartao>
       </div>
 

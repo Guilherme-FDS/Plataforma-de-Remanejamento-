@@ -22,7 +22,7 @@ import { listarRemanejamentos } from "@/lib/dados";
 export default async function ImprimirRelatorio({
   searchParams,
 }: {
-  searchParams: { setores?: string; situacao?: string };
+  searchParams: { setores?: string; situacao?: string; modelo?: string };
 }) {
   const ref = hoje();
   const todos = await listarRemanejamentos();
@@ -38,6 +38,8 @@ export default async function ImprimirRelatorio({
     ref,
   );
 
+  const resumido = searchParams.modelo === "resumido";
+
   const descricaoFiltros = [
     setoresSel.length > 0 ? `Setores: ${setoresSel.join(", ")}` : "Todos os setores",
     situacaoSel === "abertos"
@@ -52,7 +54,9 @@ export default async function ImprimirRelatorio({
       <AutoPrint />
 
       <h1 className="text-xl font-bold text-slate-900">
-        Relatório de Remanejamentos — GTF Maringá
+        {resumido
+          ? "Relatório Resumido de Remanejamentos — GTF Maringá"
+          : "Relatório de Remanejamentos — GTF Maringá"}
       </h1>
       <p className="mt-1 text-sm text-slate-600">
         Gerado em {formatarDataObj(ref)} · {descricaoFiltros} ·{" "}
@@ -64,6 +68,35 @@ export default async function ImprimirRelatorio({
         <p className="py-8 text-center text-sm text-slate-500">
           Nenhum registro com esses filtros.
         </p>
+      ) : resumido ? (
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-slate-300 text-left text-xs uppercase tracking-wide text-slate-500">
+              <th className="py-2 pr-3 font-medium">Colaborador</th>
+              <th className="py-2 pr-3 font-medium">Setor</th>
+              <th className="py-2 pr-3 font-medium">Turno</th>
+              <th className="py-2 pr-3 font-medium">Código</th>
+              <th className="py-2 pr-3 font-medium">Previsão término</th>
+              <th className="py-2 font-medium">Supervisor</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {filtrados.map((r) => (
+              <tr key={r.id} className="align-top">
+                <td className="py-2 pr-3 font-medium text-slate-900">{r.nome}</td>
+                <td className="py-2 pr-3 text-slate-600">{r.setor ?? "—"}</td>
+                <td className="py-2 pr-3 text-slate-600">{r.turno ?? "—"}</td>
+                <td className="py-2 pr-3 tabular-nums text-slate-600">
+                  {r.matricula ?? "—"}
+                </td>
+                <td className="whitespace-nowrap py-2 pr-3 tabular-nums text-slate-600">
+                  {formatarDataObj(previsaoFim(r))}
+                </td>
+                <td className="py-2 text-slate-600">{r.supervisor ?? "—"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       ) : (
         <table className="w-full text-sm">
           <thead>
