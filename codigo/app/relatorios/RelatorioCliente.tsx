@@ -30,6 +30,8 @@ export default function RelatorioCliente({
   const [setoresSel, setSetoresSel] = useState<string[]>([]);
   const [situacaoSel, setSituacaoSel] = useState<SituacaoRelatorio>("todos");
   const [formatoExport, setFormatoExport] = useState<"xlsx" | "pdf">("xlsx");
+  const [modelo, setModelo] = useState<"completo" | "resumido">("completo");
+  const resumido = modelo === "resumido";
 
   const filtrados = useMemo(
     () => filtrarRelatorio(todos, { setores: setoresSel, situacao: situacaoSel }, ref),
@@ -89,11 +91,11 @@ export default function RelatorioCliente({
     XLSX.writeFile(livro, `relatorio_resumido_${new Date().toISOString().slice(0, 10)}.xlsx`);
   }
 
-  function abrirImpressao(modelo?: "resumido") {
+  function abrirImpressao() {
     const params = new URLSearchParams();
     if (setoresSel.length > 0) params.set("setores", setoresSel.join(","));
     if (situacaoSel !== "todos") params.set("situacao", situacaoSel);
-    if (modelo) params.set("modelo", modelo);
+    if (resumido) params.set("modelo", "resumido");
     window.open(`/relatorios/imprimir?${params.toString()}`, "_blank");
   }
 
@@ -242,39 +244,32 @@ export default function RelatorioCliente({
         </Cartao>
       </div>
 
-      {/* Relatório resumido — mesmos filtros, colunas reduzidas */}
-      <div className="sem-impressao">
-        <Cartao titulo="Relatório resumido">
-          <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
-            <p className="text-sm text-slate-600">
-              Nome, setor, turno, código, previsão de término e supervisor ·{" "}
-              {filtrados.length} registro{filtrados.length !== 1 ? "s" : ""}
-            </p>
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={exportarResumidoXLSX}
-                disabled={filtrados.length === 0}
-                className="rounded-md border border-gtf-700 px-4 py-2 text-sm font-medium text-gtf-700 transition hover:bg-gtf-50 disabled:cursor-not-allowed disabled:border-slate-300 disabled:text-slate-400"
-              >
-                Exportar XLSX
-              </button>
-              <button
-                onClick={() => abrirImpressao("resumido")}
-                disabled={filtrados.length === 0}
-                className="rounded-md bg-gtf-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-gtf-800 disabled:cursor-not-allowed disabled:bg-slate-300"
-              >
-                Gerar PDF
-              </button>
-            </div>
-          </div>
-        </Cartao>
-      </div>
-
       {/* Tabela + botões de ação */}
       <Cartao
         titulo={`Colaboradores — ${filtrados.length} registro${filtrados.length !== 1 ? "s" : ""}`}
       >
         <div className="sem-impressao flex flex-wrap items-center justify-end gap-3 px-5 py-3 border-b border-slate-100">
+          {/* Seletor de modelo */}
+          <div className="flex rounded-md border border-slate-200 overflow-hidden text-sm">
+            {(
+              [
+                { v: "completo", r: "Completo" },
+                { v: "resumido", r: "Resumido" },
+              ] as const
+            ).map((o) => (
+              <button
+                key={o.v}
+                onClick={() => setModelo(o.v)}
+                className={`px-3 py-1.5 font-medium transition ${
+                  modelo === o.v
+                    ? "bg-slate-800 text-white"
+                    : "bg-white text-slate-600 hover:bg-slate-50"
+                }`}
+              >
+                {o.r}
+              </button>
+            ))}
+          </div>
           {/* Seletor de formato */}
           <div className="flex rounded-md border border-slate-200 overflow-hidden text-sm">
             {(["xlsx", "pdf"] as const).map((f) => (
@@ -293,17 +288,60 @@ export default function RelatorioCliente({
           </div>
           <button
             onClick={() =>
-              formatoExport === "xlsx" ? exportarXLSX() : abrirImpressao()
+              formatoExport === "pdf"
+                ? abrirImpressao()
+                : resumido
+                  ? exportarResumidoXLSX()
+                  : exportarXLSX()
             }
             disabled={filtrados.length === 0}
             className="rounded-md bg-gtf-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-gtf-800 disabled:cursor-not-allowed disabled:bg-slate-300"
           >
             {formatoExport === "xlsx" ? "Exportar XLSX" : "Gerar PDF"}
+            {resumido ? " resumido" : ""}
           </button>
         </div>
 
         {filtrados.length === 0 ? (
           <Vazio>Nenhum registro com esses filtros.</Vazio>
+        ) : resumido ? (
+          <div className="rolagem-x">
+            <table className="w-full min-w-[44rem] text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
+                  <th className="px-5 py-2.5 font-medium">Colaborador</th>
+                  <th className="px-3 py-2.5 font-medium">Setor</th>
+                  <th className="px-3 py-2.5 font-medium">Turno</th>
+                  <th className="px-3 py-2.5 font-medium">Código</th>
+                  <th className="px-3 py-2.5 font-medium">Previsão término</th>
+                  <th className="px-5 py-2.5 font-medium">Supervisor</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filtrados.map((r) => (
+                  <tr key={r.id} className="align-top hover:bg-slate-50">
+                    <td className="px-5 py-3">
+                      <a
+                        href={`/colaboradores/${r.colaboradorId}`}
+                        className="font-medium text-slate-900 hover:underline"
+                      >
+                        {r.nome}
+                      </a>
+                    </td>
+                    <td className="px-3 py-3 text-slate-600">{r.setor ?? "—"}</td>
+                    <td className="px-3 py-3 text-slate-600">{r.turno ?? "—"}</td>
+                    <td className="px-3 py-3 tabular-nums text-slate-600">
+                      {r.matricula ?? "—"}
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-3 tabular-nums text-slate-600">
+                      {formatarDataObj(previsaoFim(r))}
+                    </td>
+                    <td className="px-5 py-3 text-slate-600">{r.supervisor ?? "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         ) : (
           <div className="rolagem-x">
             <table className="w-full min-w-[52rem] text-sm">
