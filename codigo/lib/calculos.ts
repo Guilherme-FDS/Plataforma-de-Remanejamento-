@@ -170,6 +170,37 @@ export function filtrarRelatorio(
   });
 }
 
+export type OrdemCampo = "nome" | "inicio" | "previsao" | "codigo";
+export type OrdemDirecao = "asc" | "desc";
+
+/**
+ * Ordena o relatório. Campo vazio (sem código, sem previsão) vai sempre
+ * para o fim, nas duas direções — senão a lista abre com uma pilha de "—".
+ */
+export function ordenarRelatorio(
+  itens: Remanejamento[],
+  campo: OrdemCampo,
+  direcao: OrdemDirecao,
+): Remanejamento[] {
+  const chave = (r: Remanejamento): string | number | null => {
+    if (campo === "nome") return r.nome;
+    if (campo === "codigo") return r.matricula;
+    if (campo === "inicio") return r.dataInicio || null;
+    return previsaoFim(r)?.getTime() ?? null;
+  };
+  const sinal = direcao === "asc" ? 1 : -1;
+  return [...itens].sort((a, b) => {
+    const ka = chave(a);
+    const kb = chave(b);
+    if (ka === null || kb === null) return ka === kb ? 0 : ka === null ? 1 : -1;
+    const cmp =
+      typeof ka === "string" && typeof kb === "string"
+        ? ka.localeCompare(kb, "pt-BR", { sensitivity: "base" })
+        : (ka as number) - (kb as number);
+    return cmp * sinal;
+  });
+}
+
 /** Dias até a previsão de término. Negativo = já venceu. */
 export function diasAteFim(r: Remanejamento, ref: Date = hoje()): number | null {
   const fim = previsaoFim(r);

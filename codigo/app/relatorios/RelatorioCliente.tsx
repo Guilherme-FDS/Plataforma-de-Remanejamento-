@@ -12,8 +12,11 @@ import {
   formatarData,
   formatarDataObj,
   hoje,
+  ordenarRelatorio,
   previsaoFim,
   situacaoDe,
+  type OrdemCampo,
+  type OrdemDirecao,
   type SituacaoRelatorio,
 } from "@/lib/calculos";
 import type { Remanejamento } from "@/lib/tipos";
@@ -32,10 +35,18 @@ export default function RelatorioCliente({
   const [formatoExport, setFormatoExport] = useState<"xlsx" | "pdf">("xlsx");
   const [modelo, setModelo] = useState<"completo" | "resumido">("completo");
   const resumido = modelo === "resumido";
+  // Padrão = ordem de sempre (início mais recente primeiro).
+  const [ordemCampo, setOrdemCampo] = useState<OrdemCampo>("inicio");
+  const [ordemDirecao, setOrdemDirecao] = useState<OrdemDirecao>("desc");
 
   const filtrados = useMemo(
-    () => filtrarRelatorio(todos, { setores: setoresSel, situacao: situacaoSel }, ref),
-    [todos, setoresSel, situacaoSel, ref],
+    () =>
+      ordenarRelatorio(
+        filtrarRelatorio(todos, { setores: setoresSel, situacao: situacaoSel }, ref),
+        ordemCampo,
+        ordemDirecao,
+      ),
+    [todos, setoresSel, situacaoSel, ref, ordemCampo, ordemDirecao],
   );
 
   const abertos = filtrados.filter((r) => estaAberto(r, ref));
@@ -96,6 +107,8 @@ export default function RelatorioCliente({
     if (setoresSel.length > 0) params.set("setores", setoresSel.join(","));
     if (situacaoSel !== "todos") params.set("situacao", situacaoSel);
     if (resumido) params.set("modelo", "resumido");
+    params.set("ordem", ordemCampo);
+    params.set("direcao", ordemDirecao);
     window.open(`/relatorios/imprimir?${params.toString()}`, "_blank");
   }
 
@@ -174,6 +187,53 @@ export default function RelatorioCliente({
                     onClick={() => setSituacaoSel(o.v)}
                     className={`rounded-full border px-3 py-1 text-sm transition ${
                       situacaoSel === o.v
+                        ? "border-gtf-700 bg-gtf-700 text-white"
+                        : "border-slate-300 bg-white text-slate-600 hover:border-slate-400"
+                    }`}
+                  >
+                    {o.r}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
+                Ordenar por
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                {(
+                  [
+                    { v: "nome", r: "Nome" },
+                    { v: "inicio", r: "Data de início" },
+                    { v: "previsao", r: "Previsão de término" },
+                    { v: "codigo", r: "Código" },
+                  ] as { v: OrdemCampo; r: string }[]
+                ).map((o) => (
+                  <button
+                    key={o.v}
+                    onClick={() => setOrdemCampo(o.v)}
+                    className={`rounded-full border px-3 py-1 text-sm transition ${
+                      ordemCampo === o.v
+                        ? "border-gtf-700 bg-gtf-700 text-white"
+                        : "border-slate-300 bg-white text-slate-600 hover:border-slate-400"
+                    }`}
+                  >
+                    {o.r}
+                  </button>
+                ))}
+                <span className="mx-1 h-5 w-px bg-slate-200" aria-hidden />
+                {(
+                  [
+                    { v: "asc", r: "Crescente" },
+                    { v: "desc", r: "Decrescente" },
+                  ] as { v: OrdemDirecao; r: string }[]
+                ).map((o) => (
+                  <button
+                    key={o.v}
+                    onClick={() => setOrdemDirecao(o.v)}
+                    className={`rounded-full border px-3 py-1 text-sm transition ${
+                      ordemDirecao === o.v
                         ? "border-gtf-700 bg-gtf-700 text-white"
                         : "border-slate-300 bg-white text-slate-600 hover:border-slate-400"
                     }`}

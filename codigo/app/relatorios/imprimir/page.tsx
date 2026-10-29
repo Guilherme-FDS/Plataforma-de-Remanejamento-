@@ -7,8 +7,11 @@ import {
   formatarData,
   formatarDataObj,
   hoje,
+  ordenarRelatorio,
   previsaoFim,
   situacaoDe,
+  type OrdemCampo,
+  type OrdemDirecao,
   type SituacaoRelatorio,
 } from "@/lib/calculos";
 import { listarRemanejamentos } from "@/lib/dados";
@@ -22,7 +25,13 @@ import { listarRemanejamentos } from "@/lib/dados";
 export default async function ImprimirRelatorio({
   searchParams,
 }: {
-  searchParams: { setores?: string; situacao?: string; modelo?: string };
+  searchParams: {
+    setores?: string;
+    situacao?: string;
+    modelo?: string;
+    ordem?: string;
+    direcao?: string;
+  };
 }) {
   const ref = hoje();
   const todos = await listarRemanejamentos();
@@ -32,10 +41,16 @@ export default async function ImprimirRelatorio({
     : [];
   const situacaoSel = (searchParams.situacao ?? "todos") as SituacaoRelatorio;
 
-  const filtrados = filtrarRelatorio(
-    todos,
-    { setores: setoresSel, situacao: situacaoSel },
-    ref,
+  const CAMPOS: OrdemCampo[] = ["nome", "inicio", "previsao", "codigo"];
+  const ordemCampo = CAMPOS.includes(searchParams.ordem as OrdemCampo)
+    ? (searchParams.ordem as OrdemCampo)
+    : "inicio";
+  const ordemDirecao: OrdemDirecao = searchParams.direcao === "asc" ? "asc" : "desc";
+
+  const filtrados = ordenarRelatorio(
+    filtrarRelatorio(todos, { setores: setoresSel, situacao: situacaoSel }, ref),
+    ordemCampo,
+    ordemDirecao,
   );
 
   const resumido = searchParams.modelo === "resumido";
@@ -47,6 +62,11 @@ export default async function ImprimirRelatorio({
       : situacaoSel === "encerrados"
         ? "Encerrados"
         : "Todos",
+    `Ordem: ${
+      { nome: "nome", inicio: "data de início", previsao: "previsão de término", codigo: "código" }[
+        ordemCampo
+      ]
+    } (${ordemDirecao === "asc" ? "crescente" : "decrescente"})`,
   ].join(" · ");
 
   return (

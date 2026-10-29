@@ -14,6 +14,7 @@ import {
   estaAberto,
   estatisticaDuracao,
   incidenciaPorSetor,
+  ordenarRelatorio,
   situacaoDe,
 } from "./calculos";
 import type { Remanejamento } from "./tipos";
@@ -166,5 +167,31 @@ describe("incidenciaPorSetor()", () => {
     ];
     const resultado = incidenciaPorSetor(itens, { A: 1000, B: 100, C: null });
     expect(resultado.map((r) => r.setor)).toEqual(["B", "A", "C"]);
+  });
+});
+
+describe("ordenarRelatorio()", () => {
+  const itens: Remanejamento[] = [
+    { ...BASE, id: 1, nome: "Bruno", matricula: 30, dataInicio: "2026-03-01", dataPrevistaFim: "2026-04-01" },
+    { ...BASE, id: 2, nome: "ana", matricula: null, dataInicio: "2026-01-01", dataPrevistaFim: null, duracaoTipo: "permanente", duracaoDias: null },
+    { ...BASE, id: 3, nome: "Carla", matricula: 10, dataInicio: "2026-02-01", dataPrevistaFim: "2026-12-01" },
+  ];
+  const ids = (l: Remanejamento[]) => l.map((r) => r.id);
+
+  it("nome ignora maiúsculas", () => {
+    expect(ids(ordenarRelatorio(itens, "nome", "asc"))).toEqual([2, 1, 3]);
+    expect(ids(ordenarRelatorio(itens, "nome", "desc"))).toEqual([3, 1, 2]);
+  });
+
+  it("data de início", () => {
+    expect(ids(ordenarRelatorio(itens, "inicio", "asc"))).toEqual([2, 3, 1]);
+    expect(ids(ordenarRelatorio(itens, "inicio", "desc"))).toEqual([1, 3, 2]);
+  });
+
+  it("código e previsão deixam vazios no fim nas duas direções", () => {
+    expect(ids(ordenarRelatorio(itens, "codigo", "asc"))).toEqual([3, 1, 2]);
+    expect(ids(ordenarRelatorio(itens, "codigo", "desc"))).toEqual([1, 3, 2]);
+    expect(ids(ordenarRelatorio(itens, "previsao", "asc"))).toEqual([1, 3, 2]);
+    expect(ids(ordenarRelatorio(itens, "previsao", "desc"))).toEqual([3, 1, 2]);
   });
 });
