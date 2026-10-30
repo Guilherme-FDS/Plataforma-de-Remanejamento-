@@ -1,0 +1,98 @@
+name: Comparar backups (só contagens)
+
+# Diagnóstico manual: abre dois dumps da branch `backups` e imprime, lado a
+# lado, quantas linhas cada tabela tem em cada dia — e quantos objetos de
+# schema (tabelas, policies, funções...) existem. NÃO imprime nenhum dado:
+# só nomes de tabela e números. Os arquivos descriptografados ficam em
+# disco temporário do runner e são apagados no fim; nada vira artefato.
+#
+# Uso: Actions → Comparar backups → Run workflow → informar as duas datas.
+
+on:
+  workflow_dispatch:
+    inputs:
+      data_a:
+        description: "Primeira data (AAAA-MM-DD)"
+        required: true
+        default: "2026-10-28"
+      data_b:
+        description: "Segunda data (AAAA-MM-DD)"
+        required: true
+        default: "2026-10-29"
+
+permissions:
+  contents: read
+
+jobs:
+  comparar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Valida as datas
+        env:
+          A: ${{ inputs.data_a }}
+          B: ${{ inputs.data_b }}
+        run: |
+          for d in "$A" "$B"; do
+            [[ "$d" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] || { echo "::error::Data inválida: $d"; exit 1; }
+          done
+
+      - name: Baixa a branch de backups
+        uses: actions/checkout@v4
+        with:
+          ref: backups
+
+      - name: Descriptografa e conta
+        env:
+          A: ${{ inputs.data_a }}
+          B: ${{ inputs.data_b }}
+          SENHA: ${{ secrets.BACKUP_GPG_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          T=$(mktemp -d)
+          trap 'rm -rf "$T"' EXIT
+
+          for d in "$A" "$B"; do
+            f="dumps/$d.sql.gpg"
+            [ -f "$f" ] || { echo "::error::Não existe $f na branch backups"; exit 1; }
+            gpg --batch --quiet --passphrase "$SENHA" --decrypt "$f" > "$T/$d.sql"
+
+            # Linhas por tabela: conta as linhas de dados de cada bloco COPY.
+            awk '
+              /^COPY / { t=$2; n=0; dentro=1; next }
+              dentro && /^\\\.$/ { print t, n; dentro=0; next }
+              dentro { n++ }
+            ' "$T/$d.sql" | sort > "$T/$d.linhas"
+
+            # Objetos de schema.
+            {
+              echo "CREATE_TABLE $(grep -c '^CREATE TABLE' "$T/$d.sql" || true)"
+              echo "CREATE_VIEW $(grep -c '^CREATE VIEW\|^CREATE OR REPLACE VIEW' "$T/$d.sql" || true)"
+              echo "CREATE_FUNCTION $(grep -c '^CREATE FUNCTION\|^CREATE OR REPLACE FUNCTION' "$T/$d.sql" || true)"
+              echo "CREATE_POLICY $(grep -c '^CREATE POLICY' "$T/$d.sql" || true)"
+              echo "CREATE_TRIGGER $(grep -c '^CREATE TRIGGER\|^CREATE OR REPLACE TRIGGER' "$T/$d.sql" || true)"
+              echo "CREATE_INDEX $(grep -c '^CREATE INDEX\|^CREATE UNIQUE INDEX' "$T/$d.sql" || true)"
+              echo "LINHAS_DO_ARQUIVO $(wc -l < "$T/$d.sql")"
+              echo "BYTES_DO_ARQUIVO $(wc -c < "$T/$d.sql")"
+            } > "$T/$d.schema"
+          done
+
+          echo "## Linhas por tabela: $A × $B" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Tabela | $A | $B | Diferença |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---|---:|---:|---:|" >> "$GITHUB_STEP_SUMMARY"
+          join -a1 -a2 -e 0 -o 0,1.2,2.2 "$T/$A.linhas" "$T/$B.linhas" | while read -r t a b; do
+            diff=$((b - a))
+            marca=""; [ "$diff" -ne 0 ] && marca=" ⚠️"
+            echo "| $t | $a | $b | $diff$marca |" >> "$GITHUB_STEP_SUMMARY"
+            printf '%-45s %8s %8s %8s\n' "$t" "$a" "$b" "$diff"
+          done
+
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "## Schema e arquivo" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Item | $A | $B | Diferença |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---|---:|---:|---:|" >> "$GITHUB_STEP_SUMMARY"
+          join "$T/$A.schema" "$T/$B.schema" | while read -r k a b; do
+            echo "| $k | $a | $b | $((b - a)) |" >> "$GITHUB_STEP_SUMMARY"
+            printf '%-45s %8s %8s %8s\n' "$k" "$a" "$b" "$((b - a))"
+          done
