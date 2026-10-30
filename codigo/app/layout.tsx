@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import BloqueioMfa from "@/components/BloqueioMfa";
 import InatividadeLogout from "@/components/InatividadeLogout";
 import Nav from "@/components/Nav";
@@ -10,6 +10,7 @@ import {
   unidadeAtivaLeitura,
 } from "@/lib/dados";
 import { HEADER_CAMINHO } from "@/lib/caminho";
+import { COOKIE_TEMA } from "@/lib/tema";
 import { estadoMfa } from "@/lib/mfa";
 import { TODAS_UNIDADES, unidadeAtivaCookie } from "@/lib/unidade-ativa";
 import "./globals.css";
@@ -80,8 +81,10 @@ export default async function RootLayout({
     caminho.startsWith("/auth/");
   const bloquearPorMfa = !!mfa?.bloqueado && !rotaLivre;
 
+  const escuro = cookies().get(COOKIE_TEMA)?.value === "escuro";
+
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" className={escuro ? "dark" : undefined}>
       <body className="min-h-[100dvh] bg-slate-50 antialiased">
         <ServiceWorker />
         {perfil && <InatividadeLogout />}

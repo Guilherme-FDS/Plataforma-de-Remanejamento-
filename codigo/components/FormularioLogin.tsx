@@ -12,14 +12,12 @@ export default function FormularioLogin({
   destino,
   motivo,
   erroLink,
-  escuro = false,
 }: {
   destino: string;
   /** "inatividade" quando o logout automático trouxe a pessoa para cá. */
   motivo?: string;
   /** "link-invalido" quando um convite/redefinição expirou. */
   erroLink?: string;
-  escuro?: boolean;
 }) {
   const router = useRouter();
   // Aviso de inatividade só aparece se o logout automático mandou para cá;
@@ -58,7 +56,7 @@ export default function FormularioLogin({
     }
 
     // A senha só entrega AAL1. Se a conta tem autenticador cadastrado,
-    // `nextLevel` vem como "aal2" e a sessão ainda não vale para ler dado
+    // "nextLevel" vem como "aal2" e a sessão ainda não vale para ler dado
     // clínico — a RLS (migration 0012) recusa. Pede o código antes de sair
     // da tela, em vez de deixar o usuário cair num painel vazio.
     const { data: nivel } =
@@ -85,8 +83,8 @@ export default function FormularioLogin({
     setFeedbackReset(null);
     const supabase = clienteNavegador();
     // Direto na página, não em /auth/callback: a mesma página trata tanto o
-    // formato deste fluxo (`?code=`, iniciado pelo navegador) quanto o do
-    // convite feito pelo admin (`#access_token=`). Ver o comentário no topo
+    // formato deste fluxo ("?code=", iniciado pelo navegador) quanto o do
+    // convite feito pelo admin ("#access_token="). Ver o comentário no topo
     // de app/auth/redefinir/page.tsx.
     const { error } = await supabase.auth.resetPasswordForEmail(emailReset.trim(), {
       redirectTo: `${SITE_URL}/auth/redefinir`,
@@ -99,21 +97,17 @@ export default function FormularioLogin({
     );
   }
 
-  const c = (claro: string, noEscuro: string) => (escuro ? noEscuro : claro);
-  const campo = `h-12 w-full rounded-[10px] border pl-11 pr-11 text-[15px] transition focus:outline-none focus:ring-4 ${c(
-    "border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:border-gtf-600 focus:ring-gtf-600/15",
-    "border-[#22304A] bg-[#0E1626] text-slate-100 placeholder:text-slate-500 focus:border-gtf-400 focus:ring-gtf-400/20",
-  )}`;
+  const campo = `h-12 w-full rounded-[10px] border pl-11 pr-11 text-[15px] transition focus:outline-none focus:ring-4 border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:border-gtf-600 focus:ring-gtf-600/15`;
   const rotulo = "mb-1.5 block text-[13px] font-semibold";
-  const icone = `pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 ${c("text-slate-400", "text-slate-500")}`;
-  const link = `text-[13px] font-semibold hover:underline ${c("text-gtf-600", "text-gtf-300")}`;
+  const icone = `pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-slate-400`;
+  const link = `text-[13px] font-semibold hover:underline text-gtf-600`;
   const botao =
     "flex h-12 w-full items-center justify-center gap-2 rounded-[10px] bg-gtf-700 text-[15px] font-semibold text-white shadow-[0_8px_20px_-8px_rgba(0,53,142,.55)] transition hover:bg-gtf-800 active:translate-y-px disabled:cursor-wait disabled:opacity-75";
-  const sub = c("text-slate-500", "text-slate-400");
+  const sub = "text-slate-500";
 
   const Titulo = ({ olho, titulo, texto }: { olho: string; titulo: string; texto: string }) => (
     <div className="mb-6">
-      <p className={`flex items-center gap-2 text-[11.5px] font-bold uppercase tracking-[.12em] ${c("text-gtf-600", "text-gtf-300")}`}>
+      <p className={`flex items-center gap-2 text-[11.5px] font-bold uppercase tracking-[.12em] text-gtf-600`}>
         <span className="h-1.5 w-1.5 rounded-sm bg-current" />
         {olho}
       </p>
@@ -133,10 +127,7 @@ export default function FormularioLogin({
     </svg>
   );
 
-  const alertaErro = "rounded-[10px] border px-3 py-2.5 text-sm " + c(
-    "border-rose-200 bg-rose-50 text-rose-700",
-    "border-rose-900/60 bg-rose-950/40 text-rose-300",
-  );
+  const alertaErro = "rounded-[10px] border px-3 py-2.5 text-sm " + "border-rose-200 bg-rose-50 text-rose-700";
 
   if (pedeCodigo) {
     return (
@@ -194,7 +185,7 @@ export default function FormularioLogin({
               className={
                 feedbackReset.ok
                   ? "rounded-[10px] border px-3 py-2.5 text-sm " +
-                    c("border-emerald-200 bg-emerald-50 text-emerald-800", "border-emerald-900/60 bg-emerald-950/40 text-emerald-300")
+                    "border-emerald-200 bg-emerald-50 text-emerald-800"
                   : alertaErro
               }
             >
@@ -233,10 +224,7 @@ export default function FormularioLogin({
       {avisoInatividade && (
         <div
           role="status"
-          className={`mb-5 flex items-start gap-2.5 rounded-[10px] border px-3 py-2.5 text-sm ${c(
-            "border-amber-300 bg-amber-50 text-amber-800",
-            "border-amber-900/60 bg-amber-950/40 text-amber-300",
-          )}`}
+          className={`mb-5 flex items-start gap-2.5 rounded-[10px] border px-3 py-2.5 text-sm border-amber-300 bg-amber-50 text-amber-800`}
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mt-0.5 h-[18px] w-[18px] shrink-0" aria-hidden>
             <circle cx="12" cy="12" r="9" />
@@ -308,8 +296,8 @@ export default function FormularioLogin({
               aria-pressed={verSenha}
               className={`absolute right-1.5 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-lg transition ${
                 verSenha
-                  ? c("bg-gtf-50 text-gtf-600", "bg-white/10 text-gtf-300")
-                  : c("text-slate-400 hover:bg-slate-100 hover:text-slate-700", "text-slate-500 hover:bg-white/10 hover:text-slate-200")
+                  ? "bg-gtf-50 text-gtf-600"
+                  : "text-slate-400 hover:bg-slate-100 hover:text-slate-700"
               }`}
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-[18px] w-[18px]" aria-hidden>
@@ -345,12 +333,9 @@ export default function FormularioLogin({
       </form>
 
       <div
-        className={`mt-6 flex items-start gap-2.5 rounded-[10px] border border-dashed px-3.5 py-3 text-[12.5px] leading-relaxed ${c(
-          "border-slate-200 text-slate-500",
-          "border-[#22304A] text-slate-400",
-        )}`}
+        className={`mt-6 flex items-start gap-2.5 rounded-[10px] border border-dashed px-3.5 py-3 text-[12.5px] leading-relaxed border-slate-200 text-slate-500`}
       >
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`mt-0.5 h-4 w-4 shrink-0 ${c("text-gtf-600", "text-gtf-300")}`} aria-hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`mt-0.5 h-4 w-4 shrink-0 text-gtf-600`} aria-hidden>
           <path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6l-8-3Z" />
         </svg>
         <span>

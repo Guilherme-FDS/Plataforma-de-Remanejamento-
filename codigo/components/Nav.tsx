@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { definirUnidadeAtiva } from "@/app/actions/unidades";
 import { Modal } from "./ui";
+import BotaoTema from "./BotaoTema";
 import Logo from "./Logo";
 
 export interface PerfilNav {
@@ -163,6 +164,8 @@ export default function Nav({
                     {usuario}
                   </span>
                 </button>
+
+                <BotaoTema className="grid h-[38px] w-[38px] place-items-center rounded-lg border border-slate-200 text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900" />
 
                 <form action="/auth/sair" method="post" className="flex">
                   <button

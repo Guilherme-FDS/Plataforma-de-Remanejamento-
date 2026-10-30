@@ -7,10 +7,24 @@ import type { Config } from "tailwindcss";
  * fica de fora.
  */
 const config: Config = {
+  darkMode: "class",
   content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}"],
   theme: {
     extend: {
       colors: {
+        // Cinzas e cores de status vêm de variáveis CSS (globals.css): o
+        // modo escuro troca os valores e todas as telas acompanham sem
+        // precisar de `dark:` em cada componente.
+        ...Object.fromEntries(
+          ["slate", "amber", "rose", "emerald", "sky", "violet"].map((nome) => [
+            nome,
+            Object.fromEntries(
+              ["50", "100", "200", "300", "400", "500", "600", "700", "800", "900", "950"].map(
+                (tom) => [tom, `rgb(var(--${nome}-${tom}) / <alpha-value>)`],
+              ),
+            ),
+          ]),
+        ),
         gtf: {
           50: "#EBF2FF",
           100: "#D6E4FF",

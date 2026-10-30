@@ -4,6 +4,203 @@
 
 :root {
   color-scheme: light;
+  /* Paleta padrão do Tailwind (modo claro). */
+  --slate-50: 248 250 252;
+  --slate-100: 241 245 249;
+  --slate-200: 226 232 240;
+  --slate-300: 203 213 225;
+  --slate-400: 148 163 184;
+  --slate-500: 100 116 139;
+  --slate-600: 71 85 105;
+  --slate-700: 51 65 85;
+  --slate-800: 30 41 59;
+  --slate-900: 15 23 42;
+  --slate-950: 2 6 23;
+  --amber-50: 255 251 235;
+  --amber-100: 254 243 199;
+  --amber-200: 253 230 138;
+  --amber-300: 252 211 77;
+  --amber-400: 251 191 36;
+  --amber-500: 245 158 11;
+  --amber-600: 217 119 6;
+  --amber-700: 180 83 9;
+  --amber-800: 146 64 14;
+  --amber-900: 120 53 15;
+  --amber-950: 69 26 3;
+  --rose-50: 255 241 242;
+  --rose-100: 255 228 230;
+  --rose-200: 254 205 211;
+  --rose-300: 253 164 175;
+  --rose-400: 251 113 133;
+  --rose-500: 244 63 94;
+  --rose-600: 225 29 72;
+  --rose-700: 190 18 60;
+  --rose-800: 159 18 57;
+  --rose-900: 136 19 55;
+  --rose-950: 76 5 25;
+  --emerald-50: 236 253 245;
+  --emerald-100: 209 250 229;
+  --emerald-200: 167 243 208;
+  --emerald-300: 110 231 183;
+  --emerald-400: 52 211 153;
+  --emerald-500: 16 185 129;
+  --emerald-600: 5 150 105;
+  --emerald-700: 4 120 87;
+  --emerald-800: 6 95 70;
+  --emerald-900: 6 78 59;
+  --emerald-950: 2 44 34;
+  --sky-50: 240 249 255;
+  --sky-100: 224 242 254;
+  --sky-200: 186 230 253;
+  --sky-300: 125 211 252;
+  --sky-400: 56 189 248;
+  --sky-500: 14 165 233;
+  --sky-600: 2 132 199;
+  --sky-700: 3 105 161;
+  --sky-800: 7 89 133;
+  --sky-900: 12 74 110;
+  --sky-950: 8 47 73;
+  --violet-50: 245 243 255;
+  --violet-100: 237 233 254;
+  --violet-200: 221 214 254;
+  --violet-300: 196 181 253;
+  --violet-400: 167 139 250;
+  --violet-500: 139 92 246;
+  --violet-600: 124 58 237;
+  --violet-700: 109 40 217;
+  --violet-800: 91 33 182;
+  --violet-900: 76 29 149;
+  --violet-950: 46 16 101;
+}
+
+/*
+ * Modo escuro: classe `dark` no <html>, posta pelo layout a partir do
+ * cookie `gtf-tema`. Cinzas viram uma escala escura própria (fundo, cartão,
+ * borda, texto) e as cores de status se invertem (fundo-50 vira escuro,
+ * texto-800 vira claro). Só na tela: impressão/PDF saem sempre claros.
+ */
+@media screen {
+  html.dark {
+    color-scheme: dark;
+    --slate-50: 11 18 32;
+    --slate-100: 21 31 51;
+    --slate-200: 34 48 74;
+    --slate-300: 51 68 95;
+    --slate-400: 91 107 133;
+    --slate-500: 142 155 176;
+    --slate-600: 167 179 197;
+    --slate-700: 198 207 220;
+    --slate-800: 220 227 236;
+    --slate-900: 238 242 247;
+    --slate-950: 248 250 252;
+    --amber-50: 69 26 3;
+    --amber-100: 120 53 15;
+    --amber-200: 146 64 14;
+    --amber-300: 180 83 9;
+    --amber-400: 217 119 6;
+    --amber-500: 245 158 11;
+    --amber-600: 251 191 36;
+    --amber-700: 252 211 77;
+    --amber-800: 253 230 138;
+    --amber-900: 254 243 199;
+    --amber-950: 255 251 235;
+    --rose-50: 76 5 25;
+    --rose-100: 136 19 55;
+    --rose-200: 159 18 57;
+    --rose-300: 190 18 60;
+    --rose-400: 225 29 72;
+    --rose-500: 244 63 94;
+    --rose-600: 251 113 133;
+    --rose-700: 253 164 175;
+    --rose-800: 254 205 211;
+    --rose-900: 255 228 230;
+    --rose-950: 255 241 242;
+    --emerald-50: 2 44 34;
+    --emerald-100: 6 78 59;
+    --emerald-200: 6 95 70;
+    --emerald-300: 4 120 87;
+    --emerald-400: 5 150 105;
+    --emerald-500: 16 185 129;
+    --emerald-600: 52 211 153;
+    --emerald-700: 110 231 183;
+    --emerald-800: 167 243 208;
+    --emerald-900: 209 250 229;
+    --emerald-950: 236 253 245;
+    --sky-50: 8 47 73;
+    --sky-100: 12 74 110;
+    --sky-200: 7 89 133;
+    --sky-300: 3 105 161;
+    --sky-400: 2 132 199;
+    --sky-500: 14 165 233;
+    --sky-600: 56 189 248;
+    --sky-700: 125 211 252;
+    --sky-800: 186 230 253;
+    --sky-900: 224 242 254;
+    --sky-950: 240 249 255;
+    --violet-50: 46 16 101;
+    --violet-100: 76 29 149;
+    --violet-200: 91 33 182;
+    --violet-300: 109 40 217;
+    --violet-400: 124 58 237;
+    --violet-500: 139 92 246;
+    --violet-600: 167 139 250;
+    --violet-700: 196 181 253;
+    --violet-800: 221 214 254;
+    --violet-900: 237 233 254;
+    --violet-950: 245 243 255;
+  }
+
+  /* Cartões e barras: branco vira o tom de cartão. text-white continua
+     branco (texto de botão azul). */
+  html.dark .bg-white {
+    background-color: #111a2c;
+  }
+  html.dark .hover\:bg-white:hover {
+    background-color: #111a2c;
+  }
+
+  /* Tons escuros usados como fundo de texto branco (botões, chips) e
+     véus de modal: na escala invertida ficariam claros. */
+  html.dark .bg-slate-800 {
+    background-color: #3b4d6b;
+  }
+  html.dark .hover\:bg-slate-900:hover {
+    background-color: #4a5f82;
+  }
+  html.dark .hover\:bg-slate-700:hover {
+    background-color: #0044ae;
+  }
+  html.dark .bg-slate-900\/30,
+  html.dark .bg-slate-900\/40 {
+    background-color: rgb(0 0 0 / 0.55);
+  }
+
+  /* Campos sem cor própria: o padrão do navegador no escuro é cinza. */
+  html.dark input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  html.dark select,
+  html.dark textarea {
+    background-color: #0e1626;
+  }
+
+  /* Azul de marca: texto/realce escuros demais sobre fundo escuro. */
+  html.dark .text-gtf-700,
+  html.dark .text-gtf-600,
+  html.dark .text-gtf-800 {
+    color: #7fa6f0;
+  }
+  html.dark .hover\:text-gtf-700:hover,
+  html.dark .hover\:text-gtf-800:hover {
+    color: #adc8ff;
+  }
+  html.dark .bg-gtf-50 {
+    background-color: #13254a;
+  }
+  html.dark .bg-gtf-100 {
+    background-color: #1a3263;
+  }
+  html.dark .border-gtf-200 {
+    border-color: #22427e;
+  }
 }
 
 html {
