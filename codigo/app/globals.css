@@ -4,6 +4,10 @@
 
 :root {
   color-scheme: light;
+  /* Séries categóricas dos gráficos (ordem fixa; validadas p/ daltonismo). */
+  --serie-1: #2a78d6;
+  --serie-2: #eb6834;
+  --serie-3: #1baf7a;
   /* Paleta padrão do Tailwind (modo claro). */
   --slate-50: 248 250 252;
   --slate-100: 241 245 249;
@@ -82,6 +86,9 @@
 @media screen {
   html.dark {
     color-scheme: dark;
+    --serie-1: #3987e5;
+    --serie-2: #d95926;
+    --serie-3: #199e70;
     --slate-50: 11 18 32;
     --slate-100: 21 31 51;
     --slate-200: 34 48 74;

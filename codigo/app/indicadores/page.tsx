@@ -1,6 +1,7 @@
 import { Barras, Cabecalho, Cartao, Indicador, Vazio } from "@/components/ui";
 import {
   MESES_CURTOS,
+  mesDe,
   TIPO_ROTULO,
   anoDe,
   anosDisponiveis,
@@ -19,7 +20,7 @@ export const metadata = { title: "Indicadores" };
 export default async function Indicadores({
   searchParams,
 }: {
-  searchParams: { ano?: string; turno?: string };
+  searchParams: { ano?: string; turno?: string; mes?: string };
 }) {
   const [todos, listas] = await Promise.all([
     listarRemanejamentos(),
@@ -36,8 +37,8 @@ export default async function Indicadores({
   const turno = turnos.includes(searchParams.turno ?? "") ? searchParams.turno! : "";
   const base = turno ? todos.filter((r) => r.turno === turno) : todos;
   const qTurno = turno ? `&turno=${encodeURIComponent(turno)}` : "";
-  const linkIndicadores = (a: number, t: string) =>
-    `/indicadores?ano=${a}${t ? `&turno=${encodeURIComponent(t)}` : ""}`;
+  const linkIndicadores = (a: number, t: string, m?: number) =>
+    `/indicadores?ano=${a}${t ? `&turno=${encodeURIComponent(t)}` : ""}${m ? `&mes=${m}` : ""}`;
   const ano = Number(searchParams.ano) || anos[0];
   const anterior = ano - 1;
 
@@ -46,6 +47,14 @@ export default async function Indicadores({
 
   const serieAno = porMes(base, ano);
   const serieAnterior = porMes(base, anterior);
+
+  // Mês do gráfico setor × turno: o pedido na URL, senão o último mês do
+  // ano com casos.
+  const mesUrl = Number(searchParams.mes);
+  const mesSel =
+    mesUrl >= 1 && mesUrl <= 12
+      ? mesUrl
+      : serieAno.reduce((u, v, i) => (v > 0 ? i + 1 : u), new Date().getMonth() + 1);
 
   // Comparável: só os meses em que o ano atual já tem registro.
   const ultimoMes = serieAno.reduce((u, v, i) => (v > 0 ? i : u), -1);
@@ -92,7 +101,7 @@ export default async function Indicadores({
         {["", ...turnos].map((t) => (
           <a
             key={t || "todos"}
-            href={linkIndicadores(ano, t)}
+            href={linkIndicadores(ano, t, mesSel)}
             aria-current={t === turno ? "true" : undefined}
             className={`rounded-full border px-3 py-1 text-sm transition ${
               t === turno
@@ -153,6 +162,40 @@ export default async function Indicadores({
           rotuloAnterior={String(anterior)}
           href={(a, mes) => `/remanejamentos?ano=${a}&mes=${mes}${qTurno}`}
           anoAtual={ano}
+        />
+      </Cartao>
+
+      <Cartao
+        className="mt-6"
+        titulo={`Casos do mês por setor e turno — ${MESES_CURTOS[mesSel - 1]}/${ano}`}
+        descricao="Casos que começaram no mês, separados pelo turno do colaborador."
+      >
+        <div className="flex flex-wrap gap-1 border-b border-slate-100 px-5 py-3">
+          {MESES_CURTOS.map((m, i) => (
+            <a
+              key={m}
+              href={linkIndicadores(ano, turno, i + 1)}
+              aria-current={i + 1 === mesSel ? "true" : undefined}
+              className={`rounded-md px-2.5 py-1 text-xs font-medium transition ${
+                i + 1 === mesSel
+                  ? "bg-gtf-700 text-white"
+                  : serieAno[i] > 0
+                    ? "text-slate-600 ring-1 ring-slate-200 hover:text-slate-900"
+                    : "text-slate-400"
+              }`}
+            >
+              {m}
+              <span className="ml-1 tabular-nums opacity-70">{serieAno[i]}</span>
+            </a>
+          ))}
+        </div>
+        <SetorTurnoMes
+          itens={doAno.filter((r) => mesDe(r) === mesSel)}
+          turnos={turno ? [turno] : turnos}
+          todosTurnos={turnos}
+          href={(s, t) =>
+            `/remanejamentos?setor=${encodeURIComponent(s)}&turno=${encodeURIComponent(t)}&ano=${ano}&mes=${mesSel}`
+          }
         />
       </Cartao>
 
@@ -471,6 +514,134 @@ function ComparativoTipo({
           })}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+/* ------------------------------------------------- setor × turno no mês
+ * Barras agrupadas: um grupo por setor, uma barra por turno. A cor segue o
+ * turno (posição dele na lista completa), então filtrar não repinta nada.
+ * Cores validadas para daltonismo (claro e escuro); o tom aqua fica abaixo
+ * de 3:1 no fundo claro, por isso todo valor tem rótulo e existe a tabela.
+ */
+const CORES_TURNO = ["bg-[var(--serie-1)]", "bg-[var(--serie-2)]", "bg-[var(--serie-3)]"];
+
+function SetorTurnoMes({
+  itens,
+  turnos,
+  todosTurnos,
+  href,
+}: {
+  itens: Remanejamento[];
+  turnos: string[];
+  todosTurnos: string[];
+  href: (setor: string, turno: string) => string;
+}) {
+  if (itens.length === 0) return <Vazio>Nenhum caso neste mês.</Vazio>;
+
+  const cor = (t: string) => CORES_TURNO[todosTurnos.indexOf(t) % CORES_TURNO.length];
+  const conta = new Map<string, Map<string, number>>();
+  for (const r of itens) {
+    const s = r.setor ?? "Sem setor";
+    const t = r.turno ?? "";
+    if (!conta.has(s)) conta.set(s, new Map());
+    conta.get(s)!.set(t, (conta.get(s)!.get(t) ?? 0) + 1);
+  }
+  const total = (s: string) => [...conta.get(s)!.values()].reduce((a, b) => a + b, 0);
+  const setores = [...conta.keys()].sort((a, b) => total(b) - total(a) || a.localeCompare(b, "pt-BR"));
+  const max = Math.max(...setores.flatMap((s) => turnos.map((t) => conta.get(s)!.get(t) ?? 0)), 1);
+  const porTurno = (t: string) => itens.filter((r) => r.turno === t).length;
+  const semTurno = itens.filter((r) => !r.turno || !turnos.includes(r.turno)).length;
+
+  return (
+    <div className="px-5 py-4">
+      {/* Legenda com total por turno */}
+      <div className="mb-4 flex flex-wrap items-center gap-x-5 gap-y-1 text-sm text-slate-600">
+        {turnos.map((t) => (
+          <span key={t} className="flex items-center gap-1.5">
+            <span className={`h-2.5 w-2.5 rounded-sm ${cor(t)}`} />
+            {t} turno
+            <strong className="font-semibold tabular-nums text-slate-900">{porTurno(t)}</strong>
+          </span>
+        ))}
+        <span className="text-slate-500">
+          Total <strong className="font-semibold tabular-nums text-slate-900">{itens.length}</strong>
+        </span>
+        {semTurno > 0 && turnos.length > 1 && (
+          <span className="text-xs text-slate-500">({semTurno} sem turno informado)</span>
+        )}
+      </div>
+
+      <div className="rolagem-x">
+        <div className="flex min-w-max items-end gap-3 border-b border-slate-200 pt-5">
+          {setores.map((s) => (
+            <div key={s} className="flex w-[4.5rem] flex-col items-center">
+              <div className="flex h-44 items-end gap-0.5">
+                {turnos.map((t) => {
+                  const v = conta.get(s)!.get(t) ?? 0;
+                  return (
+                    <a
+                      key={t}
+                      href={v > 0 ? href(s, t) : undefined}
+                      title={`${s} · ${t} turno: ${v} caso${v !== 1 ? "s" : ""}`}
+                      className="group flex h-full w-3.5 flex-col items-center justify-end"
+                    >
+                      {v > 0 && (
+                        <>
+                          <span className="mb-0.5 text-[10px] font-medium tabular-nums text-slate-600">{v}</span>
+                          <span
+                            className={`w-full rounded-t-[4px] transition group-hover:opacity-80 ${cor(t)}`}
+                            style={{ height: `${(v / max) * 100}%`, minHeight: 4 }}
+                          />
+                        </>
+                      )}
+                    </a>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="flex min-w-max gap-3 pt-1.5">
+          {setores.map((s) => (
+            <p key={s} title={s} className="line-clamp-2 w-[4.5rem] text-center text-[11px] leading-tight text-slate-500">
+              {s}
+            </p>
+          ))}
+        </div>
+      </div>
+
+      <details className="mt-4 text-sm">
+        <summary className="cursor-pointer text-xs font-medium text-slate-500 hover:text-slate-700">
+          Ver em tabela
+        </summary>
+        <div className="rolagem-x mt-2">
+          <table className="w-full min-w-[24rem] text-sm">
+            <thead>
+              <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
+                <th className="py-2 pr-3 font-medium">Setor</th>
+                {turnos.map((t) => (
+                  <th key={t} className="py-2 pr-3 text-right font-medium">{t}</th>
+                ))}
+                <th className="py-2 text-right font-medium">Total</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {setores.map((s) => (
+                <tr key={s}>
+                  <td className="py-1.5 pr-3 text-slate-700">{s}</td>
+                  {turnos.map((t) => (
+                    <td key={t} className="py-1.5 pr-3 text-right tabular-nums text-slate-600">
+                      {conta.get(s)!.get(t) ?? 0}
+                    </td>
+                  ))}
+                  <td className="py-1.5 text-right font-medium tabular-nums text-slate-900">{total(s)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </details>
     </div>
   );
 }
