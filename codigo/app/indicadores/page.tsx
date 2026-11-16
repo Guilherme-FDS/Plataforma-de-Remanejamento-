@@ -81,7 +81,7 @@ export default async function Indicadores({
               <a
                 key={a}
                 href={linkIndicadores(a, turno)}
-                className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${
+                className={`inline-flex items-center rounded-md px-3 py-1.5 text-sm font-medium transition ${
                   a === ano
                     ? "bg-gtf-700 text-white"
                     : "bg-white text-slate-600 ring-1 ring-slate-200 hover:text-slate-900"
@@ -103,7 +103,7 @@ export default async function Indicadores({
             key={t || "todos"}
             href={linkIndicadores(ano, t, mesSel)}
             aria-current={t === turno ? "true" : undefined}
-            className={`rounded-full border px-3 py-1 text-sm transition ${
+            className={`inline-flex items-center rounded-full border px-3 py-1 text-sm transition ${
               t === turno
                 ? "border-gtf-700 bg-gtf-700 text-white"
                 : "border-slate-300 bg-white text-slate-600 hover:border-slate-400"
@@ -176,7 +176,7 @@ export default async function Indicadores({
               key={m}
               href={linkIndicadores(ano, turno, i + 1)}
               aria-current={i + 1 === mesSel ? "true" : undefined}
-              className={`rounded-md px-2.5 py-1 text-xs font-medium transition ${
+              className={`inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium transition ${
                 i + 1 === mesSel
                   ? "bg-gtf-700 text-white"
                   : serieAno[i] > 0

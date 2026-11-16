@@ -302,7 +302,7 @@ export default function RelatorioCliente({
 
       {/* ------------------------------------------------------ resultado */}
       <section className="min-w-0 rounded-xl border border-slate-200 bg-white">
-        <div className="sem-impressao sticky top-14 z-20 flex flex-wrap items-center gap-2 rounded-t-xl border-b border-slate-200 bg-white px-4 py-2.5 sm:top-16">
+        <div className="sem-impressao z-20 flex flex-wrap items-center gap-2 rounded-t-xl border-b border-slate-200 bg-white px-4 py-2.5 sm:sticky sm:top-16">
           <button
             onClick={() => setFiltrosAbertos(true)}
             className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 lg:hidden"

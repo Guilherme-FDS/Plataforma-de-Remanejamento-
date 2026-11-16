@@ -101,7 +101,11 @@ export default function Nav({
   return (
     <>
       {/* ----------------------------------------------------- barra do topo */}
-      <header className="sticky top-0 z-30 border-b border-slate-200 bg-white pt-[env(safe-area-inset-top)]">
+      <header className="sticky top-0 z-30 border-b border-slate-200 bg-white">
+        {/* No iPhone com o app instalado a barra de status é translúcida e
+            de texto branco: sem fundo escuro atrás, o relógio some. Fora
+            disso a altura é 0. Azul GTF, igual à barra do Android. */}
+        <div className="h-[env(safe-area-inset-top)] bg-gtf-700" aria-hidden />
         <div className="mx-auto flex h-14 max-w-7xl items-center gap-x-6 px-4 sm:h-16 sm:px-6 lg:px-8">
           <Link href="/" className="flex shrink-0 items-center gap-2.5">
             <Logo className="h-6 w-auto text-gtf-700 sm:h-7" />
@@ -125,7 +129,7 @@ export default function Nav({
               <Link
                 key={item.href}
                 href={item.href}
-                className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${
+                className={`inline-flex items-center rounded-md px-3 py-1.5 text-sm font-medium transition ${
                   estaAtivo(caminho, item.href)
                     ? "bg-gtf-50 text-gtf-700"
                     : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
@@ -140,7 +144,7 @@ export default function Nav({
             {podeGerenciar && (
               <Link
                 href="/remanejamentos/novo"
-                className="rounded-lg bg-gtf-700 px-3 py-2 text-sm font-medium text-white transition hover:bg-gtf-800 active:bg-gtf-900"
+                className="inline-flex items-center rounded-lg bg-gtf-700 px-3 py-2 text-sm font-medium text-white transition hover:bg-gtf-800 active:bg-gtf-900"
               >
                 <span className="sm:hidden">Lançar</span>
                 <span className="hidden sm:inline">Novo lançamento</span>
@@ -205,8 +209,6 @@ export default function Nav({
         </div>
       </nav>
 
-      {/* Espaço para a barra inferior não cobrir o fim do conteúdo. */}
-      <div className="h-16 sm:hidden" aria-hidden />
 
       {verPerfil && perfil && (
         <Modal titulo="Meus dados" onFechar={() => setVerPerfil(false)}>

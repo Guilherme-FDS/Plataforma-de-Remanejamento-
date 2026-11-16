@@ -10,6 +10,8 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: "Remanejamento",
     description:
       "Controle de restrições funcionais e remanejamentos — Medicina Ocupacional e Ergonomia, GTF Maringá",
+    // Identidade fixa do app instalado (o padrão seria derivado do start_url).
+    id: "/",
     start_url: "/",
     scope: "/",
     display: "standalone",

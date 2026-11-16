@@ -218,7 +218,20 @@ export default async function ListaRemanejamentos({
         {ordenados.length === 0 ? (
           <Vazio>Nenhum registro com esses filtros.</Vazio>
         ) : (
-          <div className="rolagem-x">
+          <>
+          {/* Celular: cartões, com as ações à vista. */}
+          <ul className="divide-y divide-slate-100 sm:hidden">
+            {ordenados.map((r) => (
+              <CartaoCaso
+                key={r.id}
+                r={r}
+                ref_={ref}
+                podeEditar={podeEditar}
+                podeExcluir={podeExcluir}
+              />
+            ))}
+          </ul>
+          <div className="rolagem-x hidden sm:block">
             <table className="w-full min-w-[56rem] text-sm">
               <thead>
                 <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
@@ -246,9 +259,69 @@ export default async function ListaRemanejamentos({
               </tbody>
             </table>
           </div>
+          </>
         )}
       </Cartao>
     </>
+  );
+}
+
+/** Caso ainda aberto: dá para editar, encerrar ou excluir. */
+function casoAberto(r: Remanejamento, ref_: Date) {
+  return situacaoDe(r, ref_) !== "encerrado";
+}
+
+function CartaoCaso({
+  r,
+  ref_,
+  podeEditar,
+  podeExcluir,
+}: {
+  r: Remanejamento;
+  ref_: Date;
+  podeEditar: boolean;
+  podeExcluir: boolean;
+}) {
+  const dias = diasAteFim(r, ref_);
+  return (
+    <li className="px-4 py-3.5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <Link
+            href={`/colaboradores/${r.colaboradorId}`}
+            className="font-medium text-slate-900 hover:underline"
+          >
+            {r.nome}
+          </Link>
+          <p className="text-xs text-slate-500">
+            {[r.matricula, r.setor, r.turno].filter(Boolean).join(" · ") || "—"}
+          </p>
+        </div>
+        <Selo situacao={situacaoDe(r, ref_)} />
+      </div>
+      <p className="mt-1.5 text-sm text-slate-700">
+        {descreverSegmento(r)}
+        {r.causa && <span className="text-slate-500"> — {r.causa}</span>}
+      </p>
+      <p className="mt-1 text-xs tabular-nums text-slate-500">
+        {TIPO_ROTULO[r.tipo]} · {formatarData(r.dataInicio)} → {formatarDataObj(previsaoFim(r))}
+        {dias !== null && dias >= 0 && dias <= 30 && (
+          <span className="text-sky-600"> (em {dias}d)</span>
+        )}
+      </p>
+      {podeEditar && casoAberto(r, ref_) && (
+        <div className="mt-2.5 flex flex-wrap items-center gap-2">
+          <Link
+            href={`/remanejamentos/${r.id}/editar`}
+            className="inline-flex items-center rounded border border-slate-200 px-3 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50"
+          >
+            Editar
+          </Link>
+          <BotaoEncerrar id={r.id} />
+          {podeExcluir && <BotaoExcluir id={r.id} />}
+        </div>
+      )}
+    </li>
   );
 }
 
@@ -304,16 +377,11 @@ function Linha({
         <Selo situacao={situacaoDe(r, ref_)} />
       </td>
       <td className="px-3 py-3">
-        {podeEditar &&
-          (situacaoDe(r, ref_) === "a_encerrar" ||
-            situacaoDe(r, ref_) === "em_andamento" ||
-            situacaoDe(r, ref_) === "permanente" ||
-            situacaoDe(r, ref_) === "acompanhamento" ||
-            situacaoDe(r, ref_) === "sem_previsao") && (
+        {podeEditar && casoAberto(r, ref_) && (
           <div className="flex flex-col gap-1">
             <Link
               href={`/remanejamentos/${r.id}/editar`}
-              className="rounded border border-slate-200 px-2 py-1 text-xs text-slate-600 hover:bg-slate-50"
+              className="inline-flex items-center rounded border border-slate-200 px-2 py-1 text-xs text-slate-600 hover:bg-slate-50"
             >
               Editar
             </Link>

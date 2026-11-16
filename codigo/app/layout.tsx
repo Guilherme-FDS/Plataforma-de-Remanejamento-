@@ -110,7 +110,9 @@ export default async function RootLayout({
           unidades={unidades}
           unidadeAtiva={unidadeAtiva}
         />
-        <main className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+        {/* No celular, folga no fim para a barra de navegação inferior (fixa)
+            não cobrir o último conteúdo. */}
+        <main className="mx-auto w-full max-w-7xl px-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))] pt-6 sm:px-6 sm:py-8 lg:px-8">
           {bloquearPorMfa ? (
             <BloqueioMfa precisaConfirmar={!!mfa?.precisaConfirmar} />
           ) : (

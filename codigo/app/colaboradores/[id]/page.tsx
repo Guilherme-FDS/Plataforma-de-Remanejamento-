@@ -108,7 +108,7 @@ export default async function FichaColaborador({
                   {podeEditar && situacaoDe(r, ref) !== "encerrado" && (
                     <Link
                       href={`/remanejamentos/${r.id}/editar`}
-                      className="ml-auto rounded-md border border-slate-200 px-3 py-1 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
+                      className="inline-flex items-center ml-auto rounded-md border border-slate-200 px-3 py-1 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
                     >
                       Editar
                     </Link>

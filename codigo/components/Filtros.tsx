@@ -20,6 +20,9 @@ export default function Filtros({
   const caminho = usePathname();
   const params = useSearchParams();
   const [busca, setBusca] = useState(params.get("busca") ?? "");
+  // No celular os selects ficam recolhidos atrás de um botão; a partir de
+  // sm aparecem sempre (o wrapper vira `contents`).
+  const [aberto, setAberto] = useState(false);
 
   const aplicar = useCallback(
     (nome: string, valor: string) => {
@@ -50,10 +53,22 @@ export default function Filtros({
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
           placeholder="Nome ou matrícula…"
-          className="h-9 w-56 rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-gtf-600 focus:outline-none focus:ring-1 focus:ring-gtf-600"
+          className="h-9 min-w-0 flex-1 rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-gtf-600 focus:outline-none focus:ring-1 focus:ring-gtf-600 sm:w-56 sm:flex-none"
         />
       )}
 
+      <button
+        type="button"
+        onClick={() => setAberto((v) => !v)}
+        aria-expanded={aberto}
+        className={`h-9 shrink-0 rounded-md border px-3 text-sm font-medium sm:hidden ${
+          ativos > 0 ? "border-gtf-600 text-gtf-700" : "border-slate-300 text-slate-600"
+        }`}
+      >
+        Filtros{ativos > 0 ? ` (${ativos})` : ""} {aberto ? "▴" : "▾"}
+      </button>
+
+      <div className={`${aberto ? "grid" : "hidden"} w-full grid-cols-2 gap-2 sm:contents`}>
       {campos.map((campo) => (
         <select
           key={campo.nome}
@@ -74,6 +89,7 @@ export default function Filtros({
           ))}
         </select>
       ))}
+      </div>
 
       {temFiltro && (
         <button

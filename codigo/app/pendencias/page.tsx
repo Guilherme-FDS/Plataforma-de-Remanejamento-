@@ -137,7 +137,7 @@ export default async function Pendencias() {
                 {podeResolver && (
                   <Link
                     href={`/remanejamentos/${p.remanejamentoId}/editar`}
-                    className="shrink-0 rounded-md bg-gtf-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-gtf-800"
+                    className="inline-flex items-center shrink-0 rounded-md bg-gtf-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-gtf-800"
                   >
                     Corrigir
                   </Link>
