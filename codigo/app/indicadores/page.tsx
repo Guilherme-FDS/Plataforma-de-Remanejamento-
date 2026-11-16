@@ -19,7 +19,7 @@ export const metadata = { title: "Indicadores" };
 export default async function Indicadores({
   searchParams,
 }: {
-  searchParams: { ano?: string };
+  searchParams: { ano?: string; turno?: string };
 }) {
   const [todos, listas] = await Promise.all([
     listarRemanejamentos(),
@@ -29,14 +29,23 @@ export default async function Indicadores({
     listas.setores.map((s) => [s.nome, s.efetivo]),
   );
   const anos = anosDisponiveis(todos);
+
+  // Filtro de turno: vale para todos os números e gráficos da tela e segue
+  // junto nos links para a lista de casos.
+  const turnos = [...new Set(todos.map((r) => r.turno).filter(Boolean))].sort() as string[];
+  const turno = turnos.includes(searchParams.turno ?? "") ? searchParams.turno! : "";
+  const base = turno ? todos.filter((r) => r.turno === turno) : todos;
+  const qTurno = turno ? `&turno=${encodeURIComponent(turno)}` : "";
+  const linkIndicadores = (a: number, t: string) =>
+    `/indicadores?ano=${a}${t ? `&turno=${encodeURIComponent(t)}` : ""}`;
   const ano = Number(searchParams.ano) || anos[0];
   const anterior = ano - 1;
 
-  const doAno = todos.filter((r) => anoDe(r) === ano);
-  const doAnterior = todos.filter((r) => anoDe(r) === anterior);
+  const doAno = base.filter((r) => anoDe(r) === ano);
+  const doAnterior = base.filter((r) => anoDe(r) === anterior);
 
-  const serieAno = porMes(todos, ano);
-  const serieAnterior = porMes(todos, anterior);
+  const serieAno = porMes(base, ano);
+  const serieAnterior = porMes(base, anterior);
 
   // Comparável: só os meses em que o ano atual já tem registro.
   const ultimoMes = serieAno.reduce((u, v, i) => (v > 0 ? i : u), -1);
@@ -62,7 +71,7 @@ export default async function Indicadores({
             {anos.map((a) => (
               <a
                 key={a}
-                href={`/indicadores?ano=${a}`}
+                href={linkIndicadores(a, turno)}
                 className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${
                   a === ano
                     ? "bg-gtf-700 text-white"
@@ -75,6 +84,31 @@ export default async function Indicadores({
           </div>
         }
       />
+
+      <div className="mb-5 flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3">
+        <span className="mr-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+          Turno
+        </span>
+        {["", ...turnos].map((t) => (
+          <a
+            key={t || "todos"}
+            href={linkIndicadores(ano, t)}
+            aria-current={t === turno ? "true" : undefined}
+            className={`rounded-full border px-3 py-1 text-sm transition ${
+              t === turno
+                ? "border-gtf-700 bg-gtf-700 text-white"
+                : "border-slate-300 bg-white text-slate-600 hover:border-slate-400"
+            }`}
+          >
+            {t || "Todos"}
+          </a>
+        ))}
+        {turno && (
+          <span className="ml-auto text-xs text-slate-500">
+            Mostrando só o {turno} turno
+          </span>
+        )}
+      </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Indicador
@@ -117,7 +151,7 @@ export default async function Indicadores({
           anterior={serieAnterior}
           rotuloAtual={String(ano)}
           rotuloAnterior={String(anterior)}
-          href={(a, mes) => `/remanejamentos?ano=${a}&mes=${mes}`}
+          href={(a, mes) => `/remanejamentos?ano=${a}&mes=${mes}${qTurno}`}
           anoAtual={ano}
         />
       </Cartao>
@@ -127,7 +161,7 @@ export default async function Indicadores({
           <Barras
             itens={contarPor(doAno, (r) => r.regiao)}
             href={(r) =>
-              `/remanejamentos?regiao=${encodeURIComponent(r)}&ano=${ano}`
+              `/remanejamentos?regiao=${encodeURIComponent(r)}&ano=${ano}${qTurno}`
             }
           />
         </Cartao>
@@ -136,7 +170,7 @@ export default async function Indicadores({
           <Barras
             itens={contarPor(doAno, (r) => r.setor)}
             href={(s) =>
-              `/remanejamentos?setor=${encodeURIComponent(s)}&ano=${ano}`
+              `/remanejamentos?setor=${encodeURIComponent(s)}&ano=${ano}${qTurno}`
             }
           />
         </Cartao>
@@ -145,9 +179,14 @@ export default async function Indicadores({
       <Cartao
         className="mt-6"
         titulo="Incidência por 100 colaboradores"
-        descricao="Só compara setores de tamanhos diferentes de verdade. Setor sem efetivo cadastrado (Config. → Setores) some da conta, não some da lista."
+        descricao={
+          "Só compara setores de tamanhos diferentes de verdade. Setor sem efetivo cadastrado (Config. → Setores) some da conta, não some da lista." +
+          (turno
+            ? " Atenção: o efetivo cadastrado é do setor inteiro (todos os turnos), então com um turno filtrado a taxa fica subestimada."
+            : "")
+        }
       >
-        <IncidenciaSetores itens={doAno} efetivoPorSetor={efetivoPorSetor} ano={ano} />
+        <IncidenciaSetores itens={doAno} efetivoPorSetor={efetivoPorSetor} ano={ano} qTurno={qTurno} />
       </Cartao>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
@@ -158,7 +197,7 @@ export default async function Indicadores({
               const id =
                 Object.entries(TIPO_ROTULO).find(([, v]) => v === label)?.[0] ??
                 label;
-              return `/remanejamentos?tipo=${encodeURIComponent(id)}&ano=${ano}`;
+              return `/remanejamentos?tipo=${encodeURIComponent(id)}&ano=${ano}${qTurno}`;
             }}
           />
         </Cartao>
@@ -226,10 +265,12 @@ function IncidenciaSetores({
   itens,
   efetivoPorSetor,
   ano,
+  qTurno,
 }: {
   itens: Remanejamento[];
   efetivoPorSetor: Record<string, number | null>;
   ano: number;
+  qTurno: string;
 }) {
   const linhas = incidenciaPorSetor(itens, efetivoPorSetor);
 
@@ -242,7 +283,7 @@ function IncidenciaSetores({
       {linhas.map((l) => (
         <li key={l.setor} className="px-5 py-2.5">
           <a
-            href={`/remanejamentos?setor=${encodeURIComponent(l.setor)}&ano=${ano}`}
+            href={`/remanejamentos?setor=${encodeURIComponent(l.setor)}&ano=${ano}${qTurno}`}
             className="flex items-baseline justify-between gap-3 hover:text-gtf-700"
           >
             <span className="truncate text-sm text-slate-700">{l.setor}</span>
