@@ -19,7 +19,7 @@ export const metadata = { title: "Indicadores" };
 export default async function Indicadores({
   searchParams,
 }: {
-  searchParams: { ano?: string };
+  searchParams: { ano?: string; turno?: string };
 }) {
   const [todos, listas] = await Promise.all([
     listarRemanejamentos(),
@@ -32,11 +32,29 @@ export default async function Indicadores({
   const ano = Number(searchParams.ano) || anos[0];
   const anterior = ano - 1;
 
-  const doAno = todos.filter((r) => anoDe(r) === ano);
-  const doAnterior = todos.filter((r) => anoDe(r) === anterior);
+  // Turnos: cadastrados + os que aparecem nos dados (importação antiga).
+  const turnos = Array.from(
+    new Set([
+      ...listas.turnos.map((t) => t.nome),
+      ...todos.map((r) => r.turno).filter((t): t is string => !!t),
+    ]),
+  ).sort((a, b) => a.localeCompare(b, "pt-BR", { numeric: true }));
+  const turno =
+    searchParams.turno && turnos.includes(searchParams.turno)
+      ? searchParams.turno
+      : "";
+  // Tudo abaixo (cards, série, rankings) respeita o turno escolhido.
+  const base = turno ? todos.filter((r) => r.turno === turno) : todos;
+  const qTurno = turno ? `&turno=${encodeURIComponent(turno)}` : "";
+  const url = (a: number, t: string) =>
+    `/indicadores?ano=${a}${t ? `&turno=${encodeURIComponent(t)}` : ""}`;
+  const sufixoTurno = turno ? ` · ${turno}` : "";
 
-  const serieAno = porMes(todos, ano);
-  const serieAnterior = porMes(todos, anterior);
+  const doAno = base.filter((r) => anoDe(r) === ano);
+  const doAnterior = base.filter((r) => anoDe(r) === anterior);
+
+  const serieAno = porMes(base, ano);
+  const serieAnterior = porMes(base, anterior);
 
   // Comparável: só os meses em que o ano atual já tem registro.
   const ultimoMes = serieAno.reduce((u, v, i) => (v > 0 ? i : u), -1);
@@ -58,27 +76,48 @@ export default async function Indicadores({
       <Cabecalho
         titulo="Indicadores"
         acao={
-          <div className="flex gap-1.5">
-            {anos.map((a) => (
-              <a
-                key={a}
-                href={`/indicadores?ano=${a}`}
-                className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${
-                  a === ano
-                    ? "bg-gtf-700 text-white"
-                    : "bg-white text-slate-600 ring-1 ring-slate-200 hover:text-slate-900"
-                }`}
-              >
-                {a}
-              </a>
-            ))}
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            {turnos.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {[["", "Todos os turnos"] as const, ...turnos.map((t) => [t, t] as const)].map(
+                  ([v, rotulo]) => (
+                    <a
+                      key={v || "todos"}
+                      href={url(ano, v)}
+                      className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${
+                        v === turno
+                          ? "bg-gtf-700 text-white"
+                          : "bg-white text-slate-600 ring-1 ring-slate-200 hover:text-slate-900"
+                      }`}
+                    >
+                      {rotulo}
+                    </a>
+                  ),
+                )}
+              </div>
+            )}
+            <div className="flex gap-1.5">
+              {anos.map((a) => (
+                <a
+                  key={a}
+                  href={url(a, turno)}
+                  className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${
+                    a === ano
+                      ? "bg-gtf-700 text-white"
+                      : "bg-white text-slate-600 ring-1 ring-slate-200 hover:text-slate-900"
+                  }`}
+                >
+                  {a}
+                </a>
+              ))}
+            </div>
           </div>
         }
       />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Indicador
-          rotulo={`Casos em ${ano}`}
+          rotulo={`Casos em ${ano}${sufixoTurno}`}
           valor={doAno.length}
           nota={
             variacao !== null
@@ -110,14 +149,14 @@ export default async function Indicadores({
 
       <Cartao
         className="mt-6"
-        titulo={`Casos por mês — ${ano} contra ${anterior}`}
+        titulo={`Casos por mês — ${ano} contra ${anterior}${sufixoTurno}`}
       >
         <SerieMensal
           atual={serieAno}
           anterior={serieAnterior}
           rotuloAtual={String(ano)}
           rotuloAnterior={String(anterior)}
-          href={(a, mes) => `/remanejamentos?ano=${a}&mes=${mes}`}
+          href={(a, mes) => `/remanejamentos?ano=${a}&mes=${mes}${qTurno}`}
           anoAtual={ano}
         />
       </Cartao>
@@ -127,7 +166,7 @@ export default async function Indicadores({
           <Barras
             itens={contarPor(doAno, (r) => r.regiao)}
             href={(r) =>
-              `/remanejamentos?regiao=${encodeURIComponent(r)}&ano=${ano}`
+              `/remanejamentos?regiao=${encodeURIComponent(r)}&ano=${ano}${qTurno}`
             }
           />
         </Cartao>
@@ -136,7 +175,7 @@ export default async function Indicadores({
           <Barras
             itens={contarPor(doAno, (r) => r.setor)}
             href={(s) =>
-              `/remanejamentos?setor=${encodeURIComponent(s)}&ano=${ano}`
+              `/remanejamentos?setor=${encodeURIComponent(s)}&ano=${ano}${qTurno}`
             }
           />
         </Cartao>
@@ -145,9 +184,13 @@ export default async function Indicadores({
       <Cartao
         className="mt-6"
         titulo="Incidência por 100 colaboradores"
-        descricao="Só compara setores de tamanhos diferentes de verdade. Setor sem efetivo cadastrado (Config. → Setores) some da conta, não some da lista."
+        descricao={
+          turno
+            ? `Atenção: o efetivo cadastrado é do setor inteiro (todos os turnos), então a taxa de ${turno} fica subestimada.`
+            : "Só compara setores de tamanhos diferentes de verdade. Setor sem efetivo cadastrado (Config. → Setores) some da conta, não some da lista."
+        }
       >
-        <IncidenciaSetores itens={doAno} efetivoPorSetor={efetivoPorSetor} ano={ano} />
+        <IncidenciaSetores itens={doAno} efetivoPorSetor={efetivoPorSetor} ano={ano} qTurno={qTurno} />
       </Cartao>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
@@ -158,7 +201,7 @@ export default async function Indicadores({
               const id =
                 Object.entries(TIPO_ROTULO).find(([, v]) => v === label)?.[0] ??
                 label;
-              return `/remanejamentos?tipo=${encodeURIComponent(id)}&ano=${ano}`;
+              return `/remanejamentos?tipo=${encodeURIComponent(id)}&ano=${ano}${qTurno}`;
             }}
           />
         </Cartao>
@@ -191,7 +234,7 @@ export default async function Indicadores({
         titulo="Reincidência"
       >
         {reincidentes.length === 0 ? (
-          <Vazio>Nenhum colaborador com mais de um caso em {ano}.</Vazio>
+          <Vazio>Nenhum colaborador com mais de um caso em {ano}{sufixoTurno}.</Vazio>
         ) : (
           <ul className="divide-y divide-slate-100">
             {reincidentes.map((p) => (
@@ -226,10 +269,12 @@ function IncidenciaSetores({
   itens,
   efetivoPorSetor,
   ano,
+  qTurno,
 }: {
   itens: Remanejamento[];
   efetivoPorSetor: Record<string, number | null>;
   ano: number;
+  qTurno: string;
 }) {
   const linhas = incidenciaPorSetor(itens, efetivoPorSetor);
 
@@ -242,7 +287,7 @@ function IncidenciaSetores({
       {linhas.map((l) => (
         <li key={l.setor} className="px-5 py-2.5">
           <a
-            href={`/remanejamentos?setor=${encodeURIComponent(l.setor)}&ano=${ano}`}
+            href={`/remanejamentos?setor=${encodeURIComponent(l.setor)}&ano=${ano}${qTurno}`}
             className="flex items-baseline justify-between gap-3 hover:text-gtf-700"
           >
             <span className="truncate text-sm text-slate-700">{l.setor}</span>
