@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { cache } from "react";
 import { notFound } from "next/navigation";
 import { Cabecalho, Cartao, Etiqueta, Indicador, Selo } from "@/components/ui";
@@ -13,7 +14,7 @@ import {
   situacaoDe,
 } from "@/lib/calculos";
 import BotaoVoltar from "@/components/BotaoVoltar";
-import { historicoDoColaborador, obterColaborador } from "@/lib/dados";
+import { historicoDoColaborador, obterColaborador, perfilAtual } from "@/lib/dados";
 
 // Metadata e página consultam o mesmo colaborador: uma ida ao banco só.
 const colaboradorPorId = cache(obterColaborador);
@@ -29,9 +30,10 @@ export default async function FichaColaborador({
   params: { id: string };
 }) {
   const id = Number(params.id);
-  const [colaborador, historico] = await Promise.all([
+  const [colaborador, historico, perfil] = await Promise.all([
     colaboradorPorId(id),
     historicoDoColaborador(id),
+    perfilAtual(),
   ]);
   if (!colaborador) notFound();
 
@@ -41,6 +43,10 @@ export default async function FichaColaborador({
   const diasTotais = historico
     .filter((r) => r.duracaoTipo === "dias" && r.duracaoDias)
     .reduce((s, r) => s + (r.duracaoDias ?? 0), 0);
+
+  // Mesma regra da lista de casos: lançador/operador editam casos não
+  // encerrados (a página de edição barra visualizador de novo pela URL).
+  const podeEditar = perfil?.papel === "lancador" || perfil?.papel === "operador";
 
   const reincidenteMesmaRegiao = historico.length > 1 && regioes.length === 1;
 
@@ -99,6 +105,14 @@ export default async function FichaColaborador({
                   <Selo situacao={situacaoDe(r, ref)} />
                   <Etiqueta>{TIPO_ROTULO[r.tipo]}</Etiqueta>
                   {r.regiao && <Etiqueta tom="escuro">{r.regiao}</Etiqueta>}
+                  {podeEditar && situacaoDe(r, ref) !== "encerrado" && (
+                    <Link
+                      href={`/remanejamentos/${r.id}/editar`}
+                      className="ml-auto rounded-md border border-slate-200 px-3 py-1 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
+                    >
+                      Editar
+                    </Link>
+                  )}
                 </div>
 
                 <p className="mt-1.5 text-sm text-slate-900">
